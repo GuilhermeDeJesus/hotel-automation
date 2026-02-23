@@ -1,0 +1,25 @@
+fastapi
+uvicorn
+pydantic
+redis
+psycopg2
+sqlalchemy
+pytest
+python-dotenv
+openai
+requests
+
+# Me explique o que é cada uma dessas dependências:
+# 1. **fastapi**: FastAPI é um framework web moderno e de alto desempenho para construir APIs com Python. Ele é baseado em padrões modernos do Python, como type hints, e é projetado para ser fácil de usar, rápido e eficiente. FastAPI é conhecido por sua simplicidade e por gerar documentação automática para as APIs criadas.
+
+# 2. **uvicorn**: Uvicorn é um servidor ASGI (Asynchronous Server Gateway Interface) de alto desempenho para Python. Ele é frequentemente usado para servir aplicações FastAPI, pois suporta recursos assíncronos e é otimizado para desempenho. Uvicorn é leve e fácil de configurar, tornando-o uma escolha popular para desenvolvimento e produção.
+
+# 3. **pydantic**: Pydantic é uma biblioteca de validação de dados e parsing para Python. Ela é usada para definir modelos de dados e validar a entrada de dados em aplicações FastAPI. 
+# Pydantic permite que você defina esquemas de dados usando classes Python, e ele automaticamente valida os dados de entrada com base nesses esquemas, garantindo que os dados sejam do tipo correto e atendam a quaisquer restrições definidas.
+
+# 4. **redis**: Redis é um banco de dados em memória, de código aberto, que é frequentemente usado como cache ou para armazenar dados temporários. 
+# A biblioteca Redis para Python permite que você se conecte a um servidor Redis e execute operações como armazenar e recuperar dados. Em aplicações FastAPI, o Redis pode ser usado para armazenar sessões, cache de resultados ou qualquer outro tipo de dado que precise ser acessado rapidamente.
+
+# 5. **psycopg2**: Psycopg2 é um adaptador de banco de dados PostgreSQL para Python. Ele permite que você se conecte a um banco de dados PostgreSQL e execute consultas SQL a partir do seu código Python. 
+# Psycopg2 é amplamente utilizado em aplicações que precisam interagir com bancos de dados PostgreSQL, oferecendo suporte para transações, conexões seguras e outras funcionalidades avançadas.
+# Essas dependências são essenciais para o desenvolvimento de uma aplicação web moderna usando FastAPI, permitindo a criação de APIs eficientes, validação de dados, armazenamento em cache e interação com bancos de dados.

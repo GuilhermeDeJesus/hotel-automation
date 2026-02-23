@@ -1,0 +1,1175 @@
+[
+  {
+    "id": 1,
+    "timestamp": "2026-02-21T11:06:45.781853",
+    "date": "2026-02-21",
+    "time": "11:06:45",
+    "phone": "terminal-session",
+    "user_message": "Oi",
+    "ai_response": "Oi! Como posso ajudar você hoje?",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 8,
+      "total": 9
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.3e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 2,
+    "timestamp": "2026-02-21T11:21:23.284492",
+    "date": "2026-02-21",
+    "time": "11:21:23",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi there",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 2,
+      "total": 3
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 3e-06,
+      "total_usd": 3e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 3,
+    "timestamp": "2026-02-21T11:21:23.305955",
+    "date": "2026-02-21",
+    "time": "11:21:23",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 4,
+    "timestamp": "2026-02-21T11:21:23.306689",
+    "date": "2026-02-21",
+    "time": "11:21:23",
+    "phone": "556199999999",
+    "user_message": "my name is John",
+    "ai_response": "Nice to meet you, John!",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 3,
+      "output": 5,
+      "total": 8
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 8e-06,
+      "total_usd": 9e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 5,
+    "timestamp": "2026-02-21T11:21:23.307324",
+    "date": "2026-02-21",
+    "time": "11:21:23",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 6,
+    "timestamp": "2026-02-21T11:21:23.320901",
+    "date": "2026-02-21",
+    "time": "11:21:23",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 7,
+    "timestamp": "2026-02-21T11:21:23.333716",
+    "date": "2026-02-21",
+    "time": "11:21:23",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 8,
+    "timestamp": "2026-02-21T11:21:34.231818",
+    "date": "2026-02-21",
+    "time": "11:21:34",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi there",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 2,
+      "total": 3
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 3e-06,
+      "total_usd": 3e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 9,
+    "timestamp": "2026-02-21T11:21:34.245982",
+    "date": "2026-02-21",
+    "time": "11:21:34",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 10,
+    "timestamp": "2026-02-21T11:21:34.247178",
+    "date": "2026-02-21",
+    "time": "11:21:34",
+    "phone": "556199999999",
+    "user_message": "my name is John",
+    "ai_response": "Nice to meet you, John!",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 3,
+      "output": 5,
+      "total": 8
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 8e-06,
+      "total_usd": 9e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 11,
+    "timestamp": "2026-02-21T11:21:34.248468",
+    "date": "2026-02-21",
+    "time": "11:21:34",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 12,
+    "timestamp": "2026-02-21T11:21:34.272882",
+    "date": "2026-02-21",
+    "time": "11:21:34",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 13,
+    "timestamp": "2026-02-21T11:21:34.284720",
+    "date": "2026-02-21",
+    "time": "11:21:34",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 14,
+    "timestamp": "2026-02-21T11:22:32.741885",
+    "date": "2026-02-21",
+    "time": "11:22:32",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi there",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 2,
+      "total": 3
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 3e-06,
+      "total_usd": 3e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 15,
+    "timestamp": "2026-02-21T11:22:32.761150",
+    "date": "2026-02-21",
+    "time": "11:22:32",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 16,
+    "timestamp": "2026-02-21T11:22:32.763042",
+    "date": "2026-02-21",
+    "time": "11:22:32",
+    "phone": "556199999999",
+    "user_message": "my name is John",
+    "ai_response": "Nice to meet you, John!",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 3,
+      "output": 5,
+      "total": 8
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 8e-06,
+      "total_usd": 9e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 17,
+    "timestamp": "2026-02-21T11:22:32.764389",
+    "date": "2026-02-21",
+    "time": "11:22:32",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 18,
+    "timestamp": "2026-02-21T11:22:32.783205",
+    "date": "2026-02-21",
+    "time": "11:22:32",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 19,
+    "timestamp": "2026-02-21T11:22:32.797488",
+    "date": "2026-02-21",
+    "time": "11:22:32",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 20,
+    "timestamp": "2026-02-21T11:46:28.069545",
+    "date": "2026-02-21",
+    "time": "11:46:28",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi there",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 2,
+      "total": 3
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 3e-06,
+      "total_usd": 3e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 21,
+    "timestamp": "2026-02-21T11:46:28.103842",
+    "date": "2026-02-21",
+    "time": "11:46:28",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 22,
+    "timestamp": "2026-02-21T11:46:28.105645",
+    "date": "2026-02-21",
+    "time": "11:46:28",
+    "phone": "556199999999",
+    "user_message": "my name is John",
+    "ai_response": "Nice to meet you, John!",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 3,
+      "output": 5,
+      "total": 8
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 8e-06,
+      "total_usd": 9e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 23,
+    "timestamp": "2026-02-21T11:46:28.107749",
+    "date": "2026-02-21",
+    "time": "11:46:28",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 24,
+    "timestamp": "2026-02-21T11:46:28.125502",
+    "date": "2026-02-21",
+    "time": "11:46:28",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 25,
+    "timestamp": "2026-02-21T11:46:28.143803",
+    "date": "2026-02-21",
+    "time": "11:46:28",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 26,
+    "timestamp": "2026-02-21T11:47:19.669928",
+    "date": "2026-02-21",
+    "time": "11:47:19",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi there",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 2,
+      "total": 3
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 3e-06,
+      "total_usd": 3e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 27,
+    "timestamp": "2026-02-21T11:47:19.687928",
+    "date": "2026-02-21",
+    "time": "11:47:19",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 28,
+    "timestamp": "2026-02-21T11:47:19.689969",
+    "date": "2026-02-21",
+    "time": "11:47:19",
+    "phone": "556199999999",
+    "user_message": "my name is John",
+    "ai_response": "Nice to meet you, John!",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 3,
+      "output": 5,
+      "total": 8
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 8e-06,
+      "total_usd": 9e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 29,
+    "timestamp": "2026-02-21T11:47:19.691787",
+    "date": "2026-02-21",
+    "time": "11:47:19",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 30,
+    "timestamp": "2026-02-21T11:47:19.708700",
+    "date": "2026-02-21",
+    "time": "11:47:19",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 31,
+    "timestamp": "2026-02-21T11:47:19.722567",
+    "date": "2026-02-21",
+    "time": "11:47:19",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 32,
+    "timestamp": "2026-02-21T11:49:08.183324",
+    "date": "2026-02-21",
+    "time": "11:49:08",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi there",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 2,
+      "total": 3
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 3e-06,
+      "total_usd": 3e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 33,
+    "timestamp": "2026-02-21T11:49:08.201141",
+    "date": "2026-02-21",
+    "time": "11:49:08",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 34,
+    "timestamp": "2026-02-21T11:49:08.203307",
+    "date": "2026-02-21",
+    "time": "11:49:08",
+    "phone": "556199999999",
+    "user_message": "my name is John",
+    "ai_response": "Nice to meet you, John!",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 3,
+      "output": 5,
+      "total": 8
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 8e-06,
+      "total_usd": 9e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 35,
+    "timestamp": "2026-02-21T11:49:08.206104",
+    "date": "2026-02-21",
+    "time": "11:49:08",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 36,
+    "timestamp": "2026-02-21T11:49:08.224922",
+    "date": "2026-02-21",
+    "time": "11:49:08",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 37,
+    "timestamp": "2026-02-21T11:49:08.240610",
+    "date": "2026-02-21",
+    "time": "11:49:08",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 38,
+    "timestamp": "2026-02-21T11:50:47.777722",
+    "date": "2026-02-21",
+    "time": "11:50:47",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi there",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 2,
+      "total": 3
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 3e-06,
+      "total_usd": 3e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 39,
+    "timestamp": "2026-02-21T11:50:47.796048",
+    "date": "2026-02-21",
+    "time": "11:50:47",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 40,
+    "timestamp": "2026-02-21T11:50:47.798513",
+    "date": "2026-02-21",
+    "time": "11:50:47",
+    "phone": "556199999999",
+    "user_message": "my name is John",
+    "ai_response": "Nice to meet you, John!",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 3,
+      "output": 5,
+      "total": 8
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 8e-06,
+      "total_usd": 9e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 41,
+    "timestamp": "2026-02-21T11:50:47.800918",
+    "date": "2026-02-21",
+    "time": "11:50:47",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 42,
+    "timestamp": "2026-02-21T11:50:47.819135",
+    "date": "2026-02-21",
+    "time": "11:50:47",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 43,
+    "timestamp": "2026-02-21T11:50:47.834444",
+    "date": "2026-02-21",
+    "time": "11:50:47",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 44,
+    "timestamp": "2026-02-21T12:22:20.052000",
+    "date": "2026-02-21",
+    "time": "12:22:20",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi there",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 2,
+      "total": 3
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 3e-06,
+      "total_usd": 3e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 45,
+    "timestamp": "2026-02-21T12:22:20.098050",
+    "date": "2026-02-21",
+    "time": "12:22:20",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 46,
+    "timestamp": "2026-02-21T12:22:20.100799",
+    "date": "2026-02-21",
+    "time": "12:22:20",
+    "phone": "556199999999",
+    "user_message": "my name is John",
+    "ai_response": "Nice to meet you, John!",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 3,
+      "output": 5,
+      "total": 8
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 8e-06,
+      "total_usd": 9e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 47,
+    "timestamp": "2026-02-21T12:22:20.105031",
+    "date": "2026-02-21",
+    "time": "12:22:20",
+    "phone": "556199999999",
+    "user_message": "what is my name?",
+    "ai_response": "I don't know, you haven't told me",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 4,
+      "output": 8,
+      "total": 12
+    },
+    "cost": {
+      "input_usd": 2e-06,
+      "output_usd": 1.2e-05,
+      "total_usd": 1.4e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 48,
+    "timestamp": "2026-02-21T12:22:20.135537",
+    "date": "2026-02-21",
+    "time": "12:22:20",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 49,
+    "timestamp": "2026-02-21T12:22:20.152346",
+    "date": "2026-02-21",
+    "time": "12:22:20",
+    "phone": "556199999999",
+    "user_message": "hello",
+    "ai_response": "hi",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 1,
+      "output": 1,
+      "total": 2
+    },
+    "cost": {
+      "input_usd": 0.0,
+      "output_usd": 2e-06,
+      "total_usd": 2e-06
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 50,
+    "timestamp": "2026-02-21T23:12:59.334388",
+    "date": "2026-02-21",
+    "time": "23:12:59",
+    "phone": "terminal-session",
+    "user_message": "Oi GPT, como voce esta ?",
+    "ai_response": "Olá! Estou aqui para ajudar, como posso te ajudar hoje?",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 6,
+      "output": 13,
+      "total": 19
+    },
+    "cost": {
+      "input_usd": 3e-06,
+      "output_usd": 1.9e-05,
+      "total_usd": 2.2e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  },
+  {
+    "id": 51,
+    "timestamp": "2026-02-21T23:13:42.453600",
+    "date": "2026-02-21",
+    "time": "23:13:42",
+    "phone": "terminal-session",
+    "user_message": "voce consegue ler meu projeto por aqui ?",
+    "ai_response": "Desculpe, mas não consigo acessar ou ler documentos ou projetos. Posso tentar te ajudar com alguma dúvida ou dar sugestões, se quiser me dar mais informações sobre o seu projeto. Como posso ajudar?",
+    "model": "gpt-3.5-turbo",
+    "tokens": {
+      "input": 10,
+      "output": 49,
+      "total": 59
+    },
+    "cost": {
+      "input_usd": 5e-06,
+      "output_usd": 7.3e-05,
+      "total_usd": 7.8e-05
+    },
+    "metadata": {
+      "source": "conversation_use_case"
+    }
+  }
+]
