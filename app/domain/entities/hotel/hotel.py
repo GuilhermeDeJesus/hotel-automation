@@ -1,18 +1,21 @@
+from app.domain.entities.hotel.policies import HotelPolicies
+
+
 class Hotel:
-    
-    def __init__(self, hotel_id: str, name: str):
+    """Hotel aggregate root with policies and contact information."""
+
+    def __init__(
+        self,
+        hotel_id: str,
+        name: str,
+        address: str,
+        contact_phone: str,
+        policies: HotelPolicies,
+        is_active: bool = True,
+    ):
         self.id = hotel_id
         self.name = name
-        self.checkin_policy = None
-        
-    def define_checkin_policy(self, policy):
-        self.checkin_policy = policy
-        
-"""
-📌 Hotel
-
-        Define:
-            horário de check-in
-            horário de check-out
-            política de cancelamento
-"""
+        self.address = address
+        self.contact_phone = contact_phone
+        self.policies = policies
+        self.is_active = is_active

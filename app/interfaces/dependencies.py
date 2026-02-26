@@ -9,12 +9,18 @@ import os
 
 from app.infrastructure.persistence.sql.database import SessionLocal, init_db
 from app.infrastructure.persistence.sql.reservation_repository_sql import ReservationRepositorySQL
+from app.infrastructure.persistence.sql.hotel_repository_sql import HotelRepositorySQL
+from app.infrastructure.persistence.sql.room_repository_sql import RoomRepositorySQL
 from app.infrastructure.persistence.memory.reservation_repository_memory import ReservationRepositoryMemory
 from app.infrastructure.cache.redis_repository import RedisRepository
 from app.infrastructure.ai.openai_client import OpenAIClient
 from app.infrastructure.logging.conversation_logger import ConversationLogger
 from app.application.use_cases.checkin_via_whatsapp import CheckInViaWhatsAppUseCase
+from app.application.use_cases.handle_whatsapp_message import HandleWhatsAppMessageUseCase
+from app.application.use_cases.confirm_reservation import ConfirmReservationUseCase
 from app.application.use_cases.conversation import ConversationUseCase
+from app.application.services.reservation_context_service import ReservationContextService
+from app.application.services.hotel_context_service import HotelContextService
 
 # Initialize database tables on module load
 init_db()
@@ -46,6 +52,30 @@ def get_checkin_use_case() -> CheckInViaWhatsAppUseCase:
     )
 
 
+def get_reservation_context_service() -> ReservationContextService:
+    """
+    Get ReservationContextService with dependencies injected.
+    
+    Returns:
+        Configured ReservationContextService instance
+    """
+    session = SessionLocal()
+    reservation_repo = ReservationRepositorySQL(session)
+    return ReservationContextService(reservation_repo=reservation_repo)
+
+
+def get_hotel_context_service() -> HotelContextService:
+    """
+    Get HotelContextService with dependencies injected.
+    
+    Returns:
+        Configured HotelContextService instance
+    """
+    session = SessionLocal()
+    hotel_repo = HotelRepositorySQL(session)
+    return HotelContextService(hotel_repository=hotel_repo)
+
+
 def get_conversation_use_case() -> ConversationUseCase:
     """
     Get ConversationUseCase with all dependencies injected.
@@ -58,6 +88,7 @@ def get_conversation_use_case() -> ConversationUseCase:
         - AIService (abstract interface)
         - ReservationRepository (abstract interface)
         - CacheRepository (abstract interface)
+        - ReservationContextService for fetching guest context
         - ConversationLogger for persistent interaction logging
     """
     # Instantiate concrete implementations
@@ -65,6 +96,8 @@ def get_conversation_use_case() -> ConversationUseCase:
     session = SessionLocal()
     reservation_repo = ReservationRepositorySQL(session)
     cache_repository = RedisRepository()
+    context_service = get_reservation_context_service()
+    hotel_context_service = get_hotel_context_service()
     logger = ConversationLogger()  # Production logger with JSON persistence
     
     # Optional: messaging provider (not yet implemented)
@@ -75,6 +108,8 @@ def get_conversation_use_case() -> ConversationUseCase:
         ai_service=ai_service,
         reservation_repo=reservation_repo,
         cache_repository=cache_repository,
+        context_service=context_service,
+        hotel_context_service=hotel_context_service,
         messaging=None,  # Optional messaging provider
         logger=logger  # Production conversation logger
     )
@@ -120,10 +155,50 @@ def get_conversation_use_case_memory() -> ConversationUseCase:
     
     cache_repository = InMemoryCache()
     
+    # Create mock context services for testing
+    class MockContextService:
+        def get_context_for_phone(self, phone: str) -> str:
+            return ""  # No context in test mode
+
+    class MockHotelContextService:
+        def get_context(self) -> str:
+            return ""  # No hotel context in test mode
+    
+    context_service = MockContextService()
+    hotel_context_service = MockHotelContextService()
+    
     return ConversationUseCase(
         ai_service=ai_service,
         reservation_repo=reservation_repo,
         cache_repository=cache_repository,
+        context_service=context_service,
+        hotel_context_service=hotel_context_service,
         messaging=None,
         logger=None  # No logging in test mode
+    )
+
+
+def get_whatsapp_message_use_case() -> HandleWhatsAppMessageUseCase:
+    """
+    Get HandleWhatsAppMessageUseCase with dependencies injected.
+
+    Returns:
+        Configured HandleWhatsAppMessageUseCase instance
+    """
+    checkin_use_case = get_checkin_use_case()
+    conversation_use_case = get_conversation_use_case()
+    
+    session = SessionLocal()
+    reservation_repo = ReservationRepositorySQL(session)
+    room_repo = RoomRepositorySQL(session)
+    
+    confirm_reservation_use_case = ConfirmReservationUseCase(reservation_repo)
+    cache_repository = RedisRepository()
+    
+    return HandleWhatsAppMessageUseCase(
+        checkin_use_case=checkin_use_case,
+        conversation_use_case=conversation_use_case,
+        confirm_reservation_use_case=confirm_reservation_use_case,
+        cache_repository=cache_repository,
+        room_repository=room_repo,
     )

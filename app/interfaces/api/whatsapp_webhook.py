@@ -2,26 +2,33 @@ import os
 import json
 import logging
 from fastapi import APIRouter, Request, Response, Depends
-from pydantic import BaseModel
 from dotenv import load_dotenv
 
-from app.application.use_cases.checkin_via_whatsapp import CheckInViaWhatsAppUseCase
-from app.application.dto.checkin_request_dto import CheckinRequestDTO
-from app.interfaces.dependencies import get_checkin_use_case
+from app.application.use_cases.handle_whatsapp_message import HandleWhatsAppMessageUseCase
+from app.application.dto.whatsapp_message_request_dto import WhatsAppMessageRequestDTO
+from app.interfaces.dependencies import get_whatsapp_message_use_case
 from app.infrastructure.messaging.whatsapp_meta_client import WhatsAppMetaClient
+from app.infrastructure.messaging.whatsapp_twilio_client import WhatsAppTwilioClient
 
 load_dotenv()
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Inicializa cliente WhatsApp
+# Inicializa clientes WhatsApp
 try:
     whatsapp_client = WhatsAppMetaClient()
     logger.info("✅ WhatsApp Meta Client inicializado")
 except Exception as e:
-    logger.error(f"❌ Erro ao inicializar WhatsApp: {str(e)}")
+    logger.error(f"❌ Erro ao inicializar WhatsApp Meta: {str(e)}")
     whatsapp_client = None
+
+try:
+    whatsapp_twilio_client = WhatsAppTwilioClient()
+    logger.info("✅ WhatsApp Twilio Client inicializado")
+except Exception as e:
+    logger.error(f"❌ Erro ao inicializar WhatsApp Twilio: {str(e)}")
+    whatsapp_twilio_client = None
 
 
 # ==================== WEBHOOK VERIFICATION ====================
@@ -51,32 +58,19 @@ async def verify_webhook(request: Request):
         return Response(content="Unauthorized", status_code=403)
 
 
-# ==================== WEBHOOK RECEIVER ====================
+# ==================== WEBHOOK RECEIVER (META) ====================
 @router.post("/webhook/whatsapp")
 async def receive_whatsapp_message(
     request: Request,
-    use_case: CheckInViaWhatsAppUseCase = Depends(get_checkin_use_case)
+    use_case: HandleWhatsAppMessageUseCase = Depends(get_whatsapp_message_use_case)
 ):
     """
     Recebe mensagens do WhatsApp via Meta Cloud API.
-    
-    Meta envia POST com a struct:
-    {
-        "object": "whatsapp_business_account",
-        "entry": [{
-            "changes": [{
-                "value": {
-                    "messages": [...],
-                    "statuses": [...]
-                }
-            }]
-        }]
-    }
     """
     
     try:
         body = await request.json()
-        logger.info(f"📨 Webhook recebido: {json.dumps(body, indent=2)}")
+        logger.info(f"📨 Webhook Meta recebido")
         
         # Valida se é realmente do WhatsApp
         if body.get("object") != "whatsapp_business_account":
@@ -93,7 +87,7 @@ async def receive_whatsapp_message(
                 for message in messages:
                     await _handle_incoming_message(message, use_case)
                 
-                # Processa status de entrega (opcional - para logging)
+                # Processa status de entrega
                 statuses = value.get("statuses", [])
                 for status in statuses:
                     _handle_message_status(status)
@@ -104,12 +98,68 @@ async def receive_whatsapp_message(
         logger.error(f"❌ JSON inválido: {str(e)}")
         return {"status": "error", "error": "Invalid JSON"}
     except Exception as e:
-        logger.error(f"❌ Erro processando webhook: {str(e)}", exc_info=True)
+        logger.error(f"❌ Erro processando webhook Meta: {str(e)}", exc_info=True)
         return {"status": "error", "error": str(e)}
 
 
+# ==================== WEBHOOK RECEIVER (TWILIO) ====================
+@router.post("/webhook/whatsapp/twilio")
+async def receive_twilio_whatsapp_message(
+    request: Request,
+    use_case: HandleWhatsAppMessageUseCase = Depends(get_whatsapp_message_use_case)
+):
+    """
+    Recebe mensagens do WhatsApp via Twilio API.
+    Responde automaticamente usando o bot."""
+    
+    if not whatsapp_twilio_client:
+        logger.error("❌ Twilio client não inicializado")
+        return Response(status_code=200)
+    
+    try:
+        # Twilio envia form-data, não JSON
+        form_data = await request.form()
+        
+        # Extrai dados da mensagem
+        from_phone = form_data.get("From", "").replace("whatsapp:", "")
+        message_body = form_data.get("Body", "")
+        message_sid = form_data.get("MessageSid", "")
+        num_media = int(form_data.get("NumMedia", 0))
+        
+        logger.info(f"📱 [TWILIO] Mensagem de {from_phone} | SID: {message_sid}")
+        logger.info(f"📝 [TWILIO] Conteúdo: '{message_body}'")
+        
+        if num_media > 0:
+            media_url = form_data.get("MediaUrl0", "")
+            logger.info(f"📎 [TWILIO] Mídia: {media_url}")
+        
+        # Processa a mensagem e gera resposta
+        response_dto = use_case.execute(
+            WhatsAppMessageRequestDTO(
+                phone=from_phone,
+                message=message_body,
+                source="twilio",
+            )
+        )
+        
+        # Envia resposta via Twilio
+        result = whatsapp_twilio_client.send_text_message(from_phone, response_dto.reply)
+        
+        if result["success"]:
+            logger.info(f"✅ [TWILIO] Resposta enviada para {from_phone}")
+        else:
+            logger.error(f"❌ [TWILIO] Erro ao enviar: {result}")
+        
+        # Twilio precisa de status 200 para confirmar
+        return Response(status_code=200)
+    
+    except Exception as e:
+        logger.error(f"❌ Erro processando webhook Twilio: {str(e)}", exc_info=True)
+        return Response(status_code=200)
+
+
 # ==================== MESSAGE HANDLERS ====================
-async def _handle_incoming_message(message: dict, use_case: CheckInViaWhatsAppUseCase):
+async def _handle_incoming_message(message: dict, use_case: HandleWhatsAppMessageUseCase):
     """
     Processa mensagem recebida do WhatsApp.
     
@@ -145,10 +195,16 @@ async def _handle_incoming_message(message: dict, use_case: CheckInViaWhatsAppUs
     
     # Processa a mensagem
     try:
-        reply = await _generate_reply(from_phone, content, use_case)
+        response_dto = use_case.execute(
+            WhatsAppMessageRequestDTO(
+                phone=from_phone,
+                message=content,
+                source="meta",
+            )
+        )
         
         # Envia resposta via WhatsApp
-        result = whatsapp_client.send_text_message(from_phone, reply)
+        result = whatsapp_client.send_text_message(from_phone, response_dto.reply)
         
         if result["success"]:
             logger.info(f"✅ Resposta enviada para {from_phone}")
@@ -197,35 +253,6 @@ def _extract_message_content(message: dict, msg_type: str) -> str:
     else:
         # Para outros tipos (imagem, arquivo, etc)
         return f"[{msg_type.upper()}]"
-
-
-async def _generate_reply(from_phone: str, content: str, use_case: CheckInViaWhatsAppUseCase) -> str:
-    """
-    Gera resposta para a mensagem.
-    
-    Aqui você implementa sua lógica de IA/fluxo.
-    """
-    
-    content_lower = content.lower().strip()
-    
-    # Exemplo 1: Se pedir check-in
-    if "check-in" in content_lower or "checkin" in content_lower:
-        try:
-            response_dto = use_case.execute(
-                CheckinRequestDTO(phone=from_phone)
-            )
-            return response_dto.message
-        except Exception as e:
-            logger.error(f"❌ Erro no check-in: {str(e)}")
-            return f"Erro ao processar check-in: {str(e)}"
-    
-    # Exemplo 2: Se pedir informações
-    elif "reserva" in content_lower or "booking" in content_lower:
-        return "Para fazer uma reserva, envie: RESERVA [datas] [quartos]"
-    
-    # Padrão: Echo da mensagem
-    else:
-        return f"Recebi sua mensagem: '{content}'\n\nComo posso ajudar?"
 
 
 def _handle_message_status(status: dict):

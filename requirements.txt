@@ -3,10 +3,12 @@ fastapi
 uvicorn
 pydantic
 python-dotenv
+python-multipart
 
 # Database
 psycopg2
 sqlalchemy
+alembic
 redis
 
 # Testing
@@ -16,3 +18,4 @@ pytest
 openai
 requests
 twilio
+pyngrok

@@ -13,6 +13,8 @@ from app.domain.value_objects.message import Message
 from app.domain.repositories.cache_repository import CacheRepository
 from app.domain.repositories.reservation_repository import ReservationRepository
 from app.application.services.ai_service import AIService
+from app.application.services.reservation_context_service import ReservationContextService
+from app.application.services.hotel_context_service import HotelContextService
 from app.application.exceptions import ConversationFailed, CacheError, AIServiceError
 from app.infrastructure.logging.conversation_logger import ConversationLogger
 
@@ -30,6 +32,8 @@ class ConversationUseCase:
         ai_service: AIService,
         reservation_repo: ReservationRepository,
         cache_repository: CacheRepository,
+        context_service: ReservationContextService,
+        hotel_context_service: HotelContextService,
         messaging: Optional[object] = None,
         logger: Optional[ConversationLogger] = None,
     ):
@@ -40,12 +44,16 @@ class ConversationUseCase:
             ai_service: AIService implementation (e.g., OpenAIClient)
             reservation_repo: Repository for accessing reservations
             cache_repository: CacheRepository for conversation history
+            context_service: ReservationContextService for fetching guest context
+            hotel_context_service: HotelContextService for hotel information
             messaging: Optional messaging provider for sending responses
             logger: Optional ConversationLogger for recording interactions
         """
         self.ai = ai_service
         self.reservation_repo = reservation_repo
         self.cache_repository = cache_repository
+        self.context_service = context_service
+        self.hotel_context_service = hotel_context_service
         self.messaging = messaging
         self.logger = logger or ConversationLogger()
 
@@ -82,8 +90,8 @@ class ConversationUseCase:
             user_message = Message(role="user", content=text)
             messages.append(user_message)
             
-            # Call AI with conversation history
-            ai_response = self._call_ai(messages)
+            # Call AI with conversation history and reservation context
+            ai_response = self._call_ai(messages, phone)
             
             # Create and add assistant message
             assistant_message = Message(role="assistant", content=ai_response)
@@ -122,12 +130,13 @@ class ConversationUseCase:
         except Exception as e:
             raise CacheError(f"Failed to retrieve conversation history: {str(e)}")
 
-    def _call_ai(self, messages: List[Message]) -> str:
+    def _call_ai(self, messages: List[Message], phone: str = None) -> str:
         """
-        Call AI service with message history.
+        Call AI service with message history and hotel/reservation context.
         
         Args:
             messages: List of Message value objects
+            phone: Optional guest phone number for context retrieval
             
         Returns:
             AI response text
@@ -135,6 +144,20 @@ class ConversationUseCase:
         try:
             # Convert Messages back to dicts for AI service
             message_dicts = [msg.to_dict() for msg in messages]
+            
+            # Prepend hotel and reservation context if available
+            system_message = "Você é um assistente de hotel prestativo e profissional."
+            hotel_context = self.hotel_context_service.get_context()
+            if hotel_context:
+                system_message += f"\n\n{hotel_context}"
+            if phone:
+                reservation_context = self.context_service.get_context_for_phone(phone)
+                if reservation_context:
+                    system_message += f"\n\n{reservation_context}"
+            
+            # Inject system message with context at the beginning
+            message_dicts.insert(0, {"role": "system", "content": system_message})
+            
             ai_response = self.ai.chat(message_dicts)
             
             # Handle different response formats

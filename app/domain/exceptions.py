@@ -26,6 +26,21 @@ class InvalidCheckInState(DomainException):
     pass
 
 
+class InvalidCheckInDate(DomainException):
+    """Raised when check-in is attempted outside valid period."""
+    pass
+
+
+class InvalidCheckOutState(DomainException):
+    """Raised when check-out is attempted in invalid reservation state."""
+    pass
+
+
+class InvalidCancellationState(DomainException):
+    """Raised when cancellation is attempted in invalid state."""
+    pass
+
+
 class ReservationNotFound(DomainException):
     """Raised when reservation lookup by ID fails."""
     pass
@@ -33,4 +48,14 @@ class ReservationNotFound(DomainException):
 
 class InvalidMessage(DomainException):
     """Raised when message violates domain rules."""
+    pass
+
+
+class PaymentNotAuthorized(DomainException):
+    """Raised when payment is not authorized for action."""
+    pass
+
+
+class InvalidPaymentState(DomainException):
+    """Raised when payment state transition is invalid."""
     pass

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 """
-Script para criar todas as tabelas do banco de dados.
+Script para DROPAR e RECRIAR todas as tabelas.
+
+⚠️  ATENÇÃO: Este script vai DELETAR todos os dados!
 
 Uso:
-    python -m app.tables
-
-Isso vai criar todas as tabelas definidas nos models SQLAlchemy.
+    python drop_and_create_tables.py
 """
 
 import sys
@@ -21,12 +21,31 @@ try:
     )
     
     print("=" * 60)
-    print("🗄️  CRIAÇÃO DE TABELAS - HOTEL AUTOMATION")
+    print("⚠️  DROPAR E RECRIAR TABELAS - HOTEL AUTOMATION")
     print("=" * 60)
     print()
     print(f"📊 Database: {DATABASE_URL}")
     print()
-    print("📋 Tabelas a serem criadas:")
+    print("⚠️  ATENÇÃO: Todos os dados serão PERDIDOS!")
+    print()
+    
+    # Confirma ação
+    confirm = input("Digite 'SIM' para continuar: ")
+    
+    if confirm.upper() != "SIM":
+        print()
+        print("❌ Operação cancelada.")
+        sys.exit(0)
+    
+    print()
+    print("🗑️  Dropando tabelas existentes...")
+    
+    # Drop todas as tabelas
+    Base.metadata.drop_all(bind=engine)
+    
+    print("✅ Tabelas dropadas!")
+    print()
+    print("📦 Criando novas tabelas:")
     print("  ✓ customers")
     print("  ✓ reservations")
     print("  ✓ payments")
@@ -37,13 +56,13 @@ try:
     Base.metadata.create_all(bind=engine)
     
     print("=" * 60)
-    print("✅ SUCESSO! Todas as tabelas foram criadas.")
+    print("✅ SUCESSO! Tabelas recriadas com nova estrutura.")
     print("=" * 60)
     print()
     print("🎯 Próximos passos:")
     print("  1. Inicie o servidor: python -m uvicorn app.main:app --reload")
-    print("  2. Teste o webhook com ngrok")
-    print("  3. Envie mensagens no WhatsApp!")
+    print("  2. Configure webhook com ngrok")
+    print("  3. Teste no WhatsApp!")
     print()
 
 except OperationalError as e:
@@ -58,16 +77,11 @@ except OperationalError as e:
     print("  2. DATABASE_URL está correto no .env?")
     print("  3. Banco de dados 'hotel' existe?")
     print()
-    print("💡 Para criar o banco:")
-    print("  psql -U postgres")
-    print("  CREATE DATABASE hotel;")
-    print("  \\q")
-    print()
     sys.exit(1)
 
 except Exception as e:
     print("=" * 60)
-    print("❌ ERRO DESCONHECIDO")
+    print("❌ ERRO")
     print("=" * 60)
     print()
     print(f"Detalhes: {str(e)}")
