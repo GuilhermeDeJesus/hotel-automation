@@ -49,6 +49,7 @@ class HandleWhatsAppMessageUseCase:
         flow_state = self._get_flow_state(phone)
         
         # Handle ongoing flows
+        # Inicia o fluxo
         if flow_state and flow_state.get("action") == self.CONFIRM_RESERVATION_ACTION:
             return self._handle_confirm_reservation_flow(phone, content_lower, flow_state)
 

@@ -82,6 +82,7 @@ python tests/test_openai_simple.py
 A documentação detalhada está em `docs/`:
 
 - `docs/ARQUITETURA_COMPLETA.md`
+- `docs/WHATSAPP_ORQUESTRACAO_GUIA.md`
 - `docs/DEPLOYMENT_GUIDE.md`
 - `docs/EXAMPLE_FLOW.md`
 - `docs/QUICKSTART_META_WHATSAPP.md`
