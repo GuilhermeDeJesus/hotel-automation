@@ -212,11 +212,14 @@ class HandleWhatsAppMessageUseCase:
                 )
 
             flow_state["step"] = self.STEP_AWAITING_ROOM_SELECTION
-            flow_state["available_rooms"] = [r["number"] for r in available_rooms]
+            flow_state["available_rooms"] = [room.number for room in available_rooms]
             self._set_flow_state(phone, flow_state, ttl_seconds=900)
 
             room_list = "\n".join(
-                [f"- {r['number']} ({r['type']}) - R$ {r['daily_rate']:.2f}/noite" for r in available_rooms]
+                [
+                    f"- {room.number} ({room.room_type}) - R$ {room.daily_rate:.2f}/noite"
+                    for room in available_rooms
+                ]
             )
             reply = f"Quartos disponíveis:\n\n{room_list}\n\nQual você escolhe?"
             return WhatsAppMessageResponseDTO(reply=reply, success=True)

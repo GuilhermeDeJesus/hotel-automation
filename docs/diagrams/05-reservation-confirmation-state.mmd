@@ -1,0 +1,15 @@
+stateDiagram-v2
+  [*] --> SummaryDisplayed: start_confirm_reservation
+  SummaryDisplayed --> Cancelled: Nao ou Cancelar
+  SummaryDisplayed --> Confirmed: Sim
+  SummaryDisplayed --> AwaitingEditChoice: Editar
+
+  AwaitingEditChoice --> Cancelled: Cancelar
+  AwaitingEditChoice --> AwaitingRoomSelection: Quarto
+  AwaitingEditChoice --> AwaitingEditChoice: Datas nao implementado
+
+  AwaitingRoomSelection --> AwaitingRoomSelection: Quarto invalido
+  AwaitingRoomSelection --> Confirmed: Quarto selecionado e salvo
+
+  Confirmed --> [*]
+  Cancelled --> [*]

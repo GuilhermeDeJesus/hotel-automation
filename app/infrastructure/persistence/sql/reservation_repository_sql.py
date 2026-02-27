@@ -1,5 +1,6 @@
 from typing import Optional
 from datetime import datetime
+import uuid
 
 from app.domain.entities.reservation.reservation import Reservation
 from app.domain.repositories.reservation_repository import ReservationRepository
@@ -51,16 +52,14 @@ class ReservationRepositorySQL(ReservationRepository):
         existing: ReservationModel | None = None
 
         if reservation.id:
-            try:
-                existing = self.session.query(ReservationModel).get(int(reservation.id))
-            except Exception:
-                existing = None
+            existing = self.session.get(ReservationModel, str(reservation.id))
 
         if existing is None:
             existing = (
                 self.session
                 .query(ReservationModel)
                 .filter_by(guest_phone=str(reservation.guest_phone))
+                .order_by(ReservationModel.created_at.desc())
                 .first()
             )
 
@@ -79,9 +78,16 @@ class ReservationRepositorySQL(ReservationRepository):
             reservation.id = str(existing.id)
         else:
             new_row = ReservationModel(
+                id=str(reservation.id) if reservation.id else str(uuid.uuid4()),
                 guest_name=getattr(reservation, "guest_name", ""),
                 guest_phone=str(reservation.guest_phone),
                 status=reservation.status.name,
+                room_number=reservation.room_number,
+                total_amount=reservation.total_amount,
+                check_in_date=reservation.stay_period.start if reservation.stay_period else None,
+                check_out_date=reservation.stay_period.end if reservation.stay_period else None,
+                checked_in_at=reservation.checked_in_at,
+                checked_out_at=reservation.checked_out_at,
             )
             self.session.add(new_row)
             self.session.flush()

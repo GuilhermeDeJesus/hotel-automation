@@ -92,5 +92,26 @@ def test_save_inserts_multiple_phones():
     assert repo.find_by_phone_number(phone2).id == r2.id
 
 
+def test_save_updates_latest_reservation_for_same_phone():
+    Session = setup_test_db()
+    session = Session()
+    repo = ReservationRepositorySQL(session)
+
+    phone = "33333333333"
+    older = Reservation("", "Guest", PhoneNumber(phone), ReservationStatus.PENDING)
+    repo.save(older)
+
+    latest = Reservation("", "Guest", PhoneNumber(phone), ReservationStatus.PENDING)
+    repo.save(latest)
+
+    latest.confirm()
+    repo.save(latest)
+
+    found = repo.find_by_phone_number(phone)
+    assert found is not None
+    assert found.id == latest.id
+    assert found.status == ReservationStatus.CONFIRMED
+
+
 if __name__ == "__main__":
     pytest.main([__file__])

@@ -13,10 +13,10 @@ from app.domain.value_objects.message import Message
 from app.domain.repositories.cache_repository import CacheRepository
 from app.domain.repositories.reservation_repository import ReservationRepository
 from app.application.services.ai_service import AIService
+from app.application.services.interaction_logger import InteractionLogger
 from app.application.services.reservation_context_service import ReservationContextService
 from app.application.services.hotel_context_service import HotelContextService
 from app.application.exceptions import ConversationFailed, CacheError, AIServiceError
-from app.infrastructure.logging.conversation_logger import ConversationLogger
 
 
 class ConversationUseCase:
@@ -35,7 +35,7 @@ class ConversationUseCase:
         context_service: ReservationContextService,
         hotel_context_service: HotelContextService,
         messaging: Optional[object] = None,
-        logger: Optional[ConversationLogger] = None,
+        logger: Optional[InteractionLogger] = None,
     ):
         """
         Initialize conversation orchestrator.
@@ -55,7 +55,7 @@ class ConversationUseCase:
         self.context_service = context_service
         self.hotel_context_service = hotel_context_service
         self.messaging = messaging
-        self.logger = logger or ConversationLogger()
+        self.logger = logger
 
     def execute(self, phone: str, text: str) -> str:
         """
@@ -146,7 +146,7 @@ class ConversationUseCase:
             message_dicts = [msg.to_dict() for msg in messages]
             
             # Prepend hotel and reservation context if available
-            system_message = "Você é um assistente de hotel prestativo e profissional."
+            system_message = "Você é um assistente de hotel prestativo e profissional. Responde às mensagens dos hóspedes de forma clara e amigável. Sempre que possível, utilize as informações da reserva e do hotel para fornecer respostas personalizadas e úteis. Não pergunte por número de noites, sempre peça por datas de checkin e checkout. Responsa de forma mais humanizada possível, não seja um robô, seja um atendente humano. Se o hóspede fornecer datas de checkin e checkout, responda com a disponibilidade e preços para esse período, e ofereça opções de quartos. Se o hóspede perguntar sobre serviços do hotel, forneça informações detalhadas sobre os serviços disponíveis, como café da manhã, piscina, academia, etc. Se o hóspede tiver uma reserva existente, utilize as informações da reserva para responder às perguntas de forma personalizada."
             hotel_context = self.hotel_context_service.get_context()
             if hotel_context:
                 system_message += f"\n\n{hotel_context}"
@@ -217,6 +217,9 @@ class ConversationUseCase:
             ai_response: AI response text
         """
         try:
+            if not self.logger:
+                return
+
             # Rough token estimation: OpenAI uses ~4 chars per token average
             tokens_input = len(user_message) // 4 or 1
             tokens_output = len(ai_response) // 4 or 1
@@ -230,7 +233,7 @@ class ConversationUseCase:
                 model="gpt-3.5-turbo",
                 metadata={"source": "conversation_use_case"}
             )
-        except Exception as e:
+        except Exception:
             # Log failures don't break the conversation flow
             # They are informational only
-            print(f"Warning: Failed to log interaction: {str(e)}")
+            pass

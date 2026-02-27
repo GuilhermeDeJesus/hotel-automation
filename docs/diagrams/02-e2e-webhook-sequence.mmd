@@ -1,0 +1,19 @@
+sequenceDiagram
+  participant W as WhatsApp Meta/Twilio
+  participant API as interfaces/api/whatsapp_webhook.py
+  participant DI as interfaces/dependencies.py
+  participant H as HandleWhatsAppMessageUseCase
+  participant UC as Sub Use Cases
+  participant DOM as Domain Entities
+  participant INF as Infra SQL Redis OpenAI
+
+  W->>API: POST webhook com mensagem
+  API->>DI: Resolve dependências
+  API->>H: execute(WhatsAppMessageRequestDTO)
+  H->>UC: Escolhe fluxo
+  UC->>DOM: Aplica regras
+  UC->>INF: Persistência, cache e IA
+  INF-->>UC: Dados e resultado
+  UC-->>H: Texto de resposta
+  H-->>API: WhatsAppMessageResponseDTO
+  API-->>W: Envia resposta ao usuário

@@ -5,19 +5,21 @@ from abc import ABC, abstractmethod
 from typing import Optional, List
 from datetime import date
 
+from app.domain.entities.room.room import Room
+
 
 class RoomRepository(ABC):
     """Interface for room data access operations."""
 
     @abstractmethod
-    def get_by_number(self, room_number: str) -> Optional[dict]:
+    def get_by_number(self, room_number: str) -> Optional[Room]:
         """Retrieve room by number."""
         pass
 
     @abstractmethod
     def find_available(
         self, check_in: date, check_out: date, exclude_room: Optional[str] = None
-    ) -> List[dict]:
+    ) -> List[Room]:
         """
         Find available rooms for a date range.
         
@@ -27,7 +29,7 @@ class RoomRepository(ABC):
             exclude_room: Room number to exclude from results
             
         Returns:
-            List of available room dicts with number, type, rate
+            List of available room entities
         """
         pass
 

@@ -1,486 +1,818 @@
-# 💡 Example: End-to-End Context Flow
+# Guia Didático Completo da Arquitetura (Camada por Camada)
 
-Este arquivo demonstra como os contextos (Passo 3 + Passo 4) fluem através do sistema.
-
----
-
-## 🎬 Cenário
-
-**Hóspede**: João Silva  
-**Reserva**: 20-25 de Dezembro 2024, Quarto 302  
-**Pergunta**: "Qual é o horário de check-in? Qual é a política de cancelamento?"
+Objetivo deste guia: explicar o projeto para quem está começando, com linguagem simples, fluxos visuais e mapeamento classe por classe e método por método.
 
 ---
 
-## 📱 Passo 1: WhatsApp Message Received
+## 0) Explicação simples (analogia)
 
-```
-Hóspede (WhatsApp):
-"Qual é o horário de check-in? Qual é a política de cancelamento?"
+Pense no sistema como um hotel com setores:
 
-from: +5561987654321 (João Silva)
-```
+- **Portaria** = camada `interfaces`
+	- recebe mensagem do WhatsApp (Meta/Twilio)
+	- entrega para o setor interno certo
+- **Gerência operacional** = camada `application`
+	- decide o que fazer: check-in, confirmar reserva, conversar com IA
+- **Regras do hotel** = camada `domain`
+	- define o que pode e o que não pode (ex.: check-in inválido)
+- **Ferramentas externas** = camada `infrastructure`
+	- banco SQL, Redis, OpenAI, APIs WhatsApp
 
----
+Regra de ouro da arquitetura limpa:
 
-## 🔌 Passo 2: Webhook Receives Message
-
-```python
-# app/interfaces/api/whatsapp_webhook.py
-@router.post("/webhook/whatsapp")
-async def handle_whatsapp(
-    request: WhatsAppMessage,
-    conversation_use_case = Depends(get_conversation_use_case)
-):
-    phone = request.messages[0].from  # +5561987654321
-    message = request.messages[0].text.body
-    
-    response = await conversation_use_case.execute(
-        phone=phone,
-        message=message
-    )
-    
-    return send_whatsapp_reply(phone, response)
-```
+- As regras de negócio não devem depender de framework, banco, API externa.
+- O centro (domínio) é o mais estável; fora dele ficam detalhes técnicos.
 
 ---
 
-## 🔄 Passo 3: ConversationUseCase Executes
+## 1) Mapa rápido de camadas
 
-```python
-# app/application/use_cases/conversation.py
-class ConversationUseCase:
-    async def execute(self, phone: str, message: str) -> str:
-        
-        # ✅ PASSO 4: Get Hotel Context
-        hotel_context = self.hotel_context_service.get_context()
-        # Returns:
-        # """CONTEXTO DO HOTEL:
-        # - Nome: Hotel Automation
-        # - Endereco: Avenida Central, 123, Brasilia - DF
-        # - Check-in: 14:00
-        # - Check-out: 12:00
-        # - Politicas: Cancelamento: Cancelamento gratis ate 24h antes do check-in | 
-        #   Pets: Nao aceitamos pets | Criancas: Criancas ate 6 anos nao pagam
-        # - Servicos: Wi-Fi, Piscina, Academia, Restaurante, Estacionamento
-        # - Contato: +55 61 99999-0000"""
-        
-        # ✅ PASSO 3: Get Reservation Context
-        reservation_context = self.context_service.get_context_for_phone(phone)
-        # Returns:
-        # """CONTEXTO DE RESERVA:
-        # - Hospede: João Silva
-        # - Status: Confirmada
-        # - Check-in: 20 de Dezembro de 2024
-        # - Check-out: 25 de Dezembro de 2024
-        # - Quarto: 302
-        # - Notas: Cliente VIP, avisar sobre upgrade disponível"""
-        
-        # 🎯 COMBINE BOTH CONTEXTS FOR SYSTEM PROMPT
-        system_message = "You are a helpful and friendly hotel assistant."
-        
-        if hotel_context:
-            system_message += f"\n\n{hotel_context}"
-        
-        if reservation_context:
-            system_message += f"\n\n{reservation_context}"
-        
-        # Final system_message:
-        system_message = """You are a helpful and friendly hotel assistant.
-
-CONTEXTO DO HOTEL:
-- Nome: Hotel Automation
-- Endereco: Avenida Central, 123, Brasilia - DF
-- Check-in: 14:00
-- Check-out: 12:00
-- Politicas: Cancelamento: Cancelamento gratis ate 24h antes do check-in | Pets: Nao aceitamos pets | Criancas: Criancas ate 6 anos nao pagam
-- Servicos: Wi-Fi, Piscina, Academia, Restaurante, Estacionamento
-- Contato: +55 61 99999-0000
-
-CONTEXTO DE RESERVA:
-- Hospede: João Silva
-- Status: Confirmada
-- Check-in: 20 de Dezembro de 2024
-- Check-out: 25 de Dezembro de 2024
-- Quarto: 302
-- Notas: Cliente VIP, avisar sobre upgrade disponível"""
-        
-        # 📚 Build conversation history
-        messages = [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": "Qual é o horário de check-in? Qual é a política de cancelamento?"}
-        ]
-        
-        # 🤖 Send to AI with FULL CONTEXT
-        response = self.ai_service.get_response(messages)
-        
-        # Save to cache and return
-        self.cache_repository.save(phone, message, response)
-        
-        return response
+```mermaid
+flowchart LR
+  U[Usuário WhatsApp] --> I[Interfaces]
+  I --> A[Application]
+  A --> D[Domain]
+  A --> INF[Infrastructure]
+  INF --> A
+  A --> I
+  I --> U
 ```
+
+Arquivo fonte: `docs/diagrams/01-layer-map.mmd`
+
+**Leitura correta:**
+- `interfaces` conversa com o mundo externo.
+- `application` orquestra casos de uso.
+- `domain` contém regras centrais.
+- `infrastructure` implementa portas/contratos.
 
 ---
 
-## 🧠 Passo 4: AI Processes with Full Context
+## 2) Fluxo ponta a ponta (do webhook até a resposta)
 
+```mermaid
+sequenceDiagram
+  participant W as WhatsApp Meta/Twilio
+  participant API as interfaces/api/whatsapp_webhook.py
+  participant DI as interfaces/dependencies.py
+  participant H as HandleWhatsAppMessageUseCase
+  participant UC as Sub Use Cases
+  participant DOM as Domain Entities
+  participant INF as Infra SQL Redis OpenAI
+
+  W->>API: POST webhook com mensagem
+  API->>DI: Resolve dependências
+  API->>H: execute(WhatsAppMessageRequestDTO)
+  H->>UC: Escolhe fluxo
+  UC->>DOM: Aplica regras
+  UC->>INF: Persistência, cache e IA
+  INF-->>UC: Dados e resultado
+  UC-->>H: Texto de resposta
+  H-->>API: WhatsAppMessageResponseDTO
+  API-->>W: Envia resposta ao usuário
 ```
-INPUT to OpenAI:
-{
-    "temperature": 0.7,
-    "messages": [
-        {
-            "role": "system",
-            "content": "You are a helpful and friendly hotel assistant.
 
-CONTEXTO DO HOTEL:
-- Nome: Hotel Automation
-- Endereco: Avenida Central, 123, Brasilia - DF
-- Check-in: 14:00
-- Check-out: 12:00
-- Politicas: Cancelamento: Cancelamento gratis ate 24h antes do check-in | Pets: Nao aceitamos pets | Criancas: Criancas ate 6 anos nao pagam
-- Servicos: Wi-Fi, Piscina, Academia, Restaurante, Estacionamento
-- Contato: +55 61 99999-0000
-
-CONTEXTO DE RESERVA:
-- Hospede: João Silva
-- Status: Confirmada
-- Check-in: 20 de Dezembro de 2024
-- Check-out: 25 de Dezembro de 2024
-- Quarto: 302
-- Notas: Cliente VIP, avisar sobre upgrade disponível"
-        },
-        {
-            "role": "user",
-            "content": "Qual é o horário de check-in? Qual é a política de cancelamento?"
-        }
-    ]
-}
-
-AI REASONING:
-✓ Hotel context provides: check-in is 14:00, cancellation policy is free until 24h before
-✓ Reservation context provides: João has reservation Dec 20-25, room 302
-✓ AI combines both to give personalized response
-
-AI RESPONSE:
-"Olá João! 👋
-
-Bem-vindo ao Hotel Automation! Temos prazer em hospedá-lo.
-
-Respondendo suas perguntas:
-
-**Check-in**: Você pode fazer check-in a partir das 14:00 de hoje (20 de Dezembro). Você está reservado para o Quarto 302. Se chegar mais cedo, nossa recepção pode guardar suas malas.
-
-**Política de Cancelamento**: Ótima notícia! Oferecemos cancelamento **gratuito até 24 horas antes do seu check-in** (19 de Dezembro às 14:00). Após esse horário, a cobrança será integral.
-
-Como cliente VIP em nosso sistema, estou preparando um pequeno upgrade para você ao chegar!
-
-Qualquer dúvida, estou por aqui. 😊"
-```
+Arquivo fonte: `docs/diagrams/02-e2e-webhook-sequence.mmd`
 
 ---
 
-## 🎯 Passo 5: Response Sent Back
+## 3) Camada de Interface (classe por classe)
 
-```python
-# Response logged and cached
-conversation_cache.save(
-    phone="+5561987654321",
-    user_message="Qual é o horário de check-in? Qual é a política de cancelamento?",
-    ai_response="Olá João! 👋...",
-    timestamp=datetime.utcnow()
-)
+### 3.1 `app/main.py`
 
-# Sent back to WhatsApp
-send_whatsapp_reply(
-    to="+5561987654321",
-    message="Olá João! 👋\n\nBem-vindo ao Hotel Automation!...",
-    message_id="wamid.123456"
-)
-```
+- Cria a aplicação FastAPI.
+- Registra o router de webhook.
 
----
+### 3.2 `app/interfaces/api/whatsapp_webhook.py`
 
-## 📊 Database State During Execution
+#### Responsabilidade
+- Receber payload HTTP.
+- Transformar para DTO de entrada.
+- Chamar use case principal.
+- Enviar resposta pelo provedor.
 
-### customers table
-```sql
-SELECT * FROM customers WHERE phone_number = '+5561987654321';
+#### Métodos importantes
 
-id  | name        | phone_number    | created_at
-----|-------------|-----------------|----------
-c1  | João Silva  | +5561987654321  | 2024-12-20 10:00:00
-```
+- `verify_webhook(request)`
+	- valida token de assinatura da Meta.
 
-### reservations table
-```sql
-SELECT * FROM reservations WHERE guest_id = 'c1';
+- `receive_whatsapp_message(request, use_case)`
+	- endpoint Meta (`POST /webhook/whatsapp`).
+	- valida payload e itera mensagens.
 
-id  | guest_id | check_in_date | check_out_date | room_number | status
-----|----------|---------------|----------------|------------|----------
-r1  | c1       | 2024-12-20    | 2024-12-25    | 302        | confirmed
-```
+- `receive_twilio_whatsapp_message(request, use_case)`
+	- endpoint Twilio (`POST /webhook/whatsapp/twilio`).
+	- lê `form-data` e chama use case.
 
-### hotels table
-```sql
-SELECT * FROM hotels WHERE is_active = true;
+- `_handle_incoming_message(message, use_case)`
+	- marca mensagem como lida (Meta).
+	- extrai conteúdo (`text`, `button`, `interactive` etc).
+	- cria `WhatsAppMessageRequestDTO`.
+	- chama `HandleWhatsAppMessageUseCase.execute`.
+	- envia resposta ao usuário.
 
-id   | name              | address                        | checkin_time | checkout_time | cancellation_policy              | pet_policy         | child_policy              | amenities
------|------------------|--------------------------------|--------------|---------------|----------------------------------|--------------------|---------------------------|---------------------------------------------
-h1   | Hotel Automation | Avenida Central, 123, Brasilia | 14:00        | 12:00         | Cancelamento gratis ate 24h...  | Nao aceitamos pets | Criancas ate 6 anos...   | Wi-Fi, Piscina, Academia, Restaurante...
-```
+- `_extract_message_content(message, msg_type)`
+	- normaliza payloads diferentes para uma string única.
 
-### conversation_cache table
-```sql
-SELECT * FROM conversation_cache WHERE phone_number = '+5561987654321' ORDER BY created_at DESC LIMIT 1;
+- `_handle_message_status(status)`
+	- trata status de entrega (observabilidade).
 
-id  | phone_number    | user_message                                  | ai_response                | created_at
-----|-----------------|-----------------------------------------------|----------------------------|----------
-cc1 | +5561987654321  | Qual é o horário de check-in? Qual é...      | Olá João! 👋 Bem-vindo... | 2024-12-20 13:45:30
-```
+### 3.3 `app/interfaces/dependencies.py` (Composition Root)
 
----
+Esse arquivo é essencial para entender arquitetura limpa.
 
-## 🔍 Code Trace: Where Contexts Come From
+- Ele **monta objetos concretos** e injeta nos use cases.
+- É o único lugar onde detalhes de infra aparecem juntos.
 
-### HotelContextService.get_context()
+Métodos:
 
-```python
-class HotelContextService:
-    def get_context(self) -> str:
-        # 1. Query database
-        hotel = self.hotel_repository.get_active_hotel()  # SQL query
-        
-        # 2. Check result
-        if not hotel:
-            return ""  # No hotel = no context (prevent hallucinations)
-        
-        # 3. Format
-        context = f"""CONTEXTO DO HOTEL:
-- Nome: {hotel.name}
-- Endereco: {hotel.address}
-- Check-in: {hotel.policies.checkin_time}
-- Check-out: {hotel.policies.checkout_time}
-- Politicas: Cancelamento: {hotel.policies.cancellation_policy} | \
-Pets: {hotel.policies.pet_policy} | Criancas: {hotel.policies.child_policy}
-- Servicos: {hotel.policies.amenities}
-- Contato: {hotel.contact_phone}"""
-        
-        return context
+- `get_checkin_use_case()`
+- `get_reservation_context_service()`
+- `get_hotel_context_service()`
+- `get_conversation_use_case()`
+- `get_conversation_use_case_memory()` (modo teste)
+- `get_whatsapp_message_use_case()`
 
-# SQL Query executed:
-SELECT id, name, address, contact_phone, checkin_time, checkout_time,
-       cancellation_policy, pet_policy, child_policy, amenities, is_active
-FROM hotels
-WHERE is_active = TRUE
-LIMIT 1;
-
-# Result:
-# Hotel Automation | Avenida Central, 123... | 14:00 | 12:00 | ... (formatted above)
-```
-
-### ReservationContextService.get_context_for_phone()
-
-```python
-class ReservationContextService:
-    def get_context_for_phone(self, phone: str) -> str:
-        # 1. Query database
-        reservation = self.reservation_repository.get_by_phone(phone)
-        customer = self.customer_repository.get_by_phone(phone)
-        
-        # 2. Check result
-        if not reservation or not customer:
-            return ""  # No reservation = no context
-        
-        # 3. Format
-        context = f"""CONTEXTO DE RESERVA:
-- Hospede: {customer.name}
-- Status: {reservation.status}
-- Check-in: {reservation.check_in_date.strftime('%d de %B de %Y')}
-- Check-out: {reservation.check_out_date.strftime('%d de %B de %Y')}
-- Quarto: {reservation.room_number}
-- Notas: {reservation.notes or 'Nenhuma'}"""
-        
-        return context
-
-# SQL Query executed:
-SELECT * FROM reservations 
-WHERE phone_number = '+5561987654321'
-AND status IN ('confirmed', 'checked_in')
-ORDER BY created_at DESC
-LIMIT 1;
-
-# Result:
-# João Silva | Confirmada | 20 de Dezembro de 2024 | 25 de Dezembro de 2024 | 302 | ...
-```
+Design Pattern aplicado: **Dependency Injection + Composition Root**.
 
 ---
 
-## ⚡ Performance Impact
+## 4) Camada de Application (classe por classe, método por método)
 
-### Queries per WhatsApp Message
-```
-1. HotelContextService.get_context()
-   → SELECT * FROM hotels WHERE is_active=TRUE LIMIT 1
-   → Time: ~10ms (indexed on is_active)
-   → Cached? No (queries DB each time - could optimize with Redis)
+Esta camada contém os **casos de uso** (regras de processo) e DTOs.
 
-2. ReservationContextService.get_context_for_phone(phone)
-   → SELECT * FROM reservations WHERE phone_number=? LIMIT 1
-   → Time: ~20ms (indexed on phone_number)
-   → Cached? No (queries DB each time)
+## 4.1 O que é DTO (explicação simples)
 
-3. AIService.get_response(messages)
-   → OpenAI API call
-   → Time: ~800-1500ms (depends on model and response length)
-   → Cached? No (each request is unique)
+DTO = **Data Transfer Object**.
 
-Total API response time: ~850-1500ms
-```
+É uma “caixinha de dados” para transportar informação entre camadas.
 
-### Optimization Opportunity
-```python
-# Cache hotel context (changes rarely)
-@functools.lru_cache(maxsize=1)
-@functools.cache(ttl=86400)  # 24 hour TTL
-def get_hotel_context() -> str:
-    # Only query DB once per 24h
-    # Result: Save 10ms per request
-```
+- Não faz regra de negócio.
+- Não fala com banco.
+- Não decide fluxo.
+- Só carrega dados.
 
----
+DTOs do projeto:
 
-## 🛡️ Error Handling
+- `WhatsAppMessageRequestDTO(phone, message, source)`
+- `WhatsAppMessageResponseDTO(reply, success, error)`
+- `CheckinRequestDTO(phone, name, room)`
+- `CheckinResponseDTO(message, success, error)`
+- `ConfirmReservationRequestDTO(phone)`
+- `ConfirmReservationResponseDTO(message, success, can_confirm, summary, status)`
 
-### What if hotel context fails?
-```python
-try:
-    hotel_context = self.hotel_context_service.get_context()
-except DatabaseError:
-    logger.error("Hotel context query failed")
-    hotel_context = ""  # Fallback: empty string
-    # AI still has reservation context, works but less informed
+### 4.2 `HandleWhatsAppMessageUseCase`
 
-# Result: Graceful degradation
-```
+Arquivo: `app/application/use_cases/handle_whatsapp_message.py`
 
-### What if AI fails?
-```python
-try:
-    response = self.ai_service.get_response(messages)
-except OpenAIError as e:
-    logger.error(f"AI service failed: {e}")
-    response = "Desculpe, estou com dificuldades no momento. Por favor tente novamente."
-    
-# Result: User notified, no system crash
-```
+#### Papel
+- É o “roteador interno” do negócio.
+- Recebe toda mensagem e decide o subfluxo.
 
----
+#### Método principal
 
-## 📈 Scaling Considerations
+- `execute(request_dto)`
+	1. Normaliza texto.
+	2. Verifica se existe fluxo em andamento (`flow:{phone}` no cache).
+	3. Detecta intenção de confirmar reserva.
+	4. Detecta intenção de check-in.
+	5. Se não cair em nada específico, vai para conversa com IA.
 
-### Multi-Hotel Support
-```python
-# Current: Single hotel in system
-hotel = self.hotel_repository.get_active_hotel()
+#### Métodos internos de confirmação
 
-# Future: Multiple hotels per tenant
-hotel = self.hotel_repository.get_active_hotel(hotel_id=request.context.hotel_id)
+- `_start_confirm_reservation_flow(phone)`
+	- chama `prepare_confirmation`.
+	- salva estado inicial no cache (TTL 900s).
+	- monta pergunta `SIM / NÃO / EDITAR`.
 
-# Would require:
-# - Pass hotel_id through webhook context
-# - Update HotelRepository.get_active_hotel(hotel_id)
-# - Database schema: add tenant_id or hotel_id
-```
+- `_handle_confirm_reservation_flow(phone, content_lower, flow_state)`
+	- despacha para etapa correta.
 
-### High Volume (1000+ messages/sec)
-```python
-# Current architecture:
-# - Database: ~30ms per request
-# - AI: ~1000ms per request
-# - Bottleneck: OpenAI API
+- `_handle_summary_response(...)`
+	- `SIM` -> confirma reserva.
+	- `NÃO` -> cancela fluxo.
+	- `EDITAR` -> vai para escolha de edição.
 
-# To scale:
-# 1. Use Redis cache for duplicate questions
-# 2. Queue AI requests with background workers
-# 3. Load balance across multiple API keys
-# 4. Implement rate limiting per phone
-```
+- `_handle_edit_choice(...)`
+	- `QUARTO` -> busca quartos disponíveis.
+	- `DATAS` -> ainda não implementado.
 
----
+- `_handle_room_selection(...)`
+	- aplica quarto escolhido e salva reserva.
 
-## 📚 Complete Flow Diagram
+#### Helpers
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ WhatsApp User: João Silva                                   │
-│ Message: "Qual é o horário de check-in?"                   │
-└─────────────────┬───────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│ Twilio WebHook = handle_whatsapp(request)                   │
-│ Extracts: phone=+5561987654321, message=...                │
-└─────────────────┬───────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│ ConversationUseCase.execute(phone, message)                 │
-├─────────────────┬───────────────────────────────────────────┤
-│                 │                                            │
-│    ┌────────────▼──────────┐                                │
-│    │ HotelContextService   │                                │
-│    │ .get_context()        │                                │
-│    │ ↓                     │                                │
-│    │ HotelRepositorySQL    │                                │
-│    │ .get_active_hotel()   │                                │
-│    │ ↓                     │                                │
-│    │ SELECT * FROM hotels  │──────→ "CONTEXTO DO HOTEL: ..."│
-│    └───────────────────────┘                                │
-│                                                              │
-│    ┌──────────────────────────┐                             │
-│    │ ReservationContextService │                             │
-│    │ .get_context_for_phone() │                             │
-│    │ ↓                        │                             │
-│    │ ReservationRepositorySQL │                             │
-│    │ .get_by_phone()          │                             │
-│    │ ↓                        │                             │
-│    │ SELECT * FROM            │──────→ "CONTEXTO DE RESERVA..."│
-│    │ reservations             │                             │
-│    └──────────────────────────┘                             │
-│                                                              │
-│    Combine both contexts into system_message               │
-└─────────────────┬───────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│ AIService.get_response(messages)                            │
-│ [system_message + user_message]                            │
-│                                                              │
-│ POST https://api.openai.com/v1/chat/completions           │
-│ With FULL CONTEXT:                                         │
-│ - Hotel name, policies, services, contact                  │
-│ - Guest name, reservation dates, room number              │
-└─────────────────┬───────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│ ChatGPT Response (informed by full context)                 │
-│ "Olá João! Check-in é às 14:00. Você pode usar..."        │
-└─────────────────┬───────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│ Cache in ConversationCache                                  │
-│ INSERT INTO conversation_cache (phone, message, response)  │
-└─────────────────┬───────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│ Send via Twilio WhatsApp API                               │
-│ Response to: +5561987654321                                │
-└─────────────────┬───────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────────────────────┐
-│ WhatsApp User receives response                             │
-│ "Olá João! Check-in é às 14:00..."  ✓                     │
-└─────────────────────────────────────────────────────────────┘
-```
+- `_is_confirm_reservation_intent`
+- `_is_positive_confirmation`
+- `_is_negative_confirmation`
+- `_is_edit_request`
+- `_get_flow_state`
+- `_set_flow_state`
+- `_clear_flow_state`
+
+### 4.3 `CheckInViaWhatsAppUseCase`
+
+Arquivo: `app/application/use_cases/checkin_via_whatsapp.py`
+
+Método:
+
+- `execute(request_dto)`
+	1. Tenta cache.
+	2. Busca reserva por telefone.
+	3. Executa `reservation.check_in()` (domínio).
+	4. Persiste no repositório.
+	5. Atualiza cache.
+	6. Retorna DTO de resposta.
+
+### 4.4 `ConfirmReservationUseCase`
+
+Arquivo: `app/application/use_cases/confirm_reservation.py`
+
+Métodos:
+
+- `prepare_confirmation(request_dto)`
+	- valida existência.
+	- bloqueia estados inválidos.
+	- retorna resumo e flag `can_confirm`.
+
+- `confirm(request_dto)`
+	- valida estados.
+	- chama `reservation.confirm()`.
+	- salva no repositório.
+
+- `get_formatted_summary(reservation)`
+	- formata resumo rico (emoji/texto).
+
+- `_build_summary(reservation)`
+	- versão simples de resumo.
+
+### 4.5 `ConversationUseCase`
+
+Arquivo: `app/application/use_cases/conversation.py`
+
+Método principal:
+
+- `execute(phone, text)`
+	1. Recupera histórico no cache.
+	2. Converte histórico para `Message`.
+	3. Adiciona mensagem do usuário.
+	4. Chama IA com contexto de hotel + reserva.
+	5. Adiciona resposta no histórico.
+	6. Persiste histórico no cache.
+	7. Loga interação.
+	8. (Opcional) envia via provider.
+
+Métodos internos:
+
+- `_get_conversation_history(phone)`
+- `_call_ai(messages, phone)`
+- `_update_conversation_history(phone, messages)`
+- `_send_message(phone, message)`
+- `_log_interaction(phone, user_message, ai_response)`
+
+### 4.6 Serviços de contexto
+
+- `HotelContextService`
+	- `get_context()` monta texto do hotel.
+	- `_load_context_data()` lê do `HotelRepository`.
+	- `_append_if(...)` helper de montagem.
+
+- `ReservationContextService`
+	- `get_context_for_phone(phone)` monta texto da reserva ativa.
+	- `_format_status(status)` traduz enum para texto amigável.
+
+### 4.7 Portas de aplicação
+
+- `AIService` (interface): `chat`, `complete`.
+- `InteractionLogger` (interface): `log_interaction`.
 
 ---
 
-**Pronto! Agora você tem a visão completa do fluxo end-to-end.** 🎯
+## 5) Camada de Domínio (o “coração”)
+
+### 5.1 Entidades e Value Objects
+
+- `Reservation` (entidade principal)
+	- `check_in(room_number=None)`
+	- `check_out()`
+	- `cancel()`
+	- `confirm()`
+	- `mark_as_no_show()`
+	- `is_active()`
+	- `can_checkin()`
+	- `to_dict()`
+
+- `StayPeriod` (value object de período)
+	- valida datas no construtor
+	- `is_checkin_allowed(today)`
+	- `is_checkout_allowed(today)`
+	- `is_active(today)`
+	- `number_of_nights()`
+	- `overlaps_with(other)`
+
+- `Message` (value object de conversa)
+	- valida role e conteúdo
+	- `to_dict()`
+
+- `PhoneNumber` (value object)
+	- valida formato mínimo
+
+- `Room` (entidade/objeto de domínio de quarto)
+	- campos: número, tipo, diária, capacidade, status
+
+### 5.2 Repositórios (contratos)
+
+- `ReservationRepository`
+	- `save(reservation)`
+	- `find_by_phone_number(phone_number)`
+
+- `RoomRepository`
+	- `get_by_number(room_number)`
+	- `find_available(check_in, check_out, exclude_room=None)`
+	- `is_available(room_number, check_in, check_out)`
+
+- `HotelRepository`
+	- `get_active_hotel()`
+	- `save(hotel)`
+
+- `CacheRepository`
+	- `get`, `set`, `delete`, `exists`, `clear`
+
+---
+
+## 6) Camada de Infrastructure (adapters concretos)
+
+### 6.1 Persistência SQL
+
+- `ReservationRepositorySQL`
+	- `find_by_phone_number`:
+		- consulta `ReservationModel`
+		- mapeia para `Reservation`
+	- `save`:
+		- update ou insert
+		- `session.commit()`
+
+- `RoomRepositorySQL`
+	- `get_by_number`
+	- `find_available` (com regra de conflito de datas no SQL)
+	- `is_available`
+	- `_to_domain(room_model)` mapper
+
+- `HotelRepositorySQL`
+	- `get_active_hotel`
+	- `save`
+
+### 6.2 Cache
+
+- `RedisRepository`
+	- `__init__`: abre conexão, faz `ping`.
+	- `get`: busca e desserializa JSON.
+	- `set`: serializa JSON + TTL.
+	- `delete`, `exists`, `clear`.
+
+### 6.3 IA
+
+- `OpenAIClient` (implementa `AIService`)
+	- `chat(messages, **kwargs)`
+	- `complete(prompt, **kwargs)`
+
+### 6.4 Logging
+
+- `ConversationLogger` (implementa `InteractionLogger`)
+	- `log_interaction(...)` grava histórico e custo.
+	- `_save()` persiste JSON em `logs/conversation_history.json`.
+	- métodos utilitários (`get_stats`, `export_csv`, etc).
+
+### 6.5 Mensageria
+
+- `WhatsAppMetaClient`
+	- `send_text_message`, `send_template_message`, `send_button_message` etc.
+
+- `WhatsAppTwilioClient`
+	- `send_text_message`, `send_media_message`, `send_template_message`, `get_message_status`.
+
+---
+
+## 7) Fluxos principais (detalhados)
+
+## 7.1 Fluxo de conversa com IA
+
+```mermaid
+flowchart TD
+  A[Webhook recebe mensagem] --> B[HandleWhatsAppMessageUseCase.execute]
+  B --> C[ConversationUseCase.execute]
+  C --> D[CacheRepository.get(phone)]
+  C --> E[HotelContextService.get_context]
+  C --> F[ReservationContextService.get_context_for_phone]
+  C --> G[AIService.chat]
+  G --> H[OpenAIClient.chat para OpenAI API]
+  C --> I[CacheRepository.set(phone, history)]
+  C --> J[InteractionLogger.log_interaction]
+  C --> K[Retorna resposta]
+  K --> L[Webhook envia mensagem ao usuário]
+```
+
+Arquivo fonte: `docs/diagrams/03-ai-conversation-flow.mmd`
+
+## 7.2 Fluxo de check-in
+
+```mermaid
+flowchart TD
+  A[Mensagem com check-in] --> B[HandleWhatsAppMessageUseCase]
+  B --> C[CheckInViaWhatsAppUseCase.execute]
+  C --> D{Tem cache}
+  D -- Sim --> E[Retorna sucesso cache]
+  D -- Não --> F[ReservationRepository.find_by_phone_number]
+  F --> G{Reserva existe}
+  G -- Não --> H[Retorna não encontrada]
+  G -- Sim --> I[Reservation.check_in]
+  I --> J[ReservationRepository.save]
+  J --> K[CacheRepository.set]
+  K --> L[Retorna sucesso]
+```
+
+Arquivo fonte: `docs/diagrams/04-checkin-flow.mmd`
+
+## 7.3 Fluxo de confirmação de reserva
+
+```mermaid
+stateDiagram-v2
+  [*] --> SummaryDisplayed: start_confirm_reservation
+  SummaryDisplayed --> Cancelled: Nao ou Cancelar
+  SummaryDisplayed --> Confirmed: Sim
+  SummaryDisplayed --> AwaitingEditChoice: Editar
+
+  AwaitingEditChoice --> Cancelled: Cancelar
+  AwaitingEditChoice --> AwaitingRoomSelection: Quarto
+  AwaitingEditChoice --> AwaitingEditChoice: Datas nao implementado
+
+  AwaitingRoomSelection --> AwaitingRoomSelection: Quarto invalido
+  AwaitingRoomSelection --> Confirmed: Quarto selecionado e salvo
+
+  Confirmed --> [*]
+  Cancelled --> [*]
+```
+
+Arquivo fonte: `docs/diagrams/05-reservation-confirmation-state.mmd`
+
+---
+
+## 8) Design Patterns usados no projeto
+
+### 8.1 DTO (Data Transfer Object)
+
+Para que serve:
+- transportar dados entre camadas sem levar regra de negócio junto.
+
+Onde está:
+- `app/application/dto/*`
+
+Por que isso ajuda:
+- evita acoplamento direto entre HTTP e domínio.
+- facilita testes e evolução de APIs.
+
+### 8.2 Repository Pattern
+
+Contrato no domínio:
+- `ReservationRepository`, `RoomRepository`, `HotelRepository`, `CacheRepository`.
+
+Implementação na infraestrutura:
+- `ReservationRepositorySQL`, `RoomRepositorySQL`, `HotelRepositorySQL`, `RedisRepository`.
+
+Benefício:
+- a regra de negócio não sabe se o dado vem de SQL, Redis, memória etc.
+
+### 8.3 Dependency Injection
+
+Onde:
+- `app/interfaces/dependencies.py`.
+
+Benefício:
+- troca de implementação sem mudar o caso de uso.
+
+### 8.4 Adapter Pattern
+
+Exemplos:
+- `OpenAIClient` adapta SDK OpenAI para interface `AIService`.
+- `WhatsAppMetaClient`/`WhatsAppTwilioClient` adaptam APIs externas.
+
+### 8.5 Use Case / Application Service
+
+Exemplos:
+- `HandleWhatsAppMessageUseCase`
+- `CheckInViaWhatsAppUseCase`
+- `ConfirmReservationUseCase`
+- `ConversationUseCase`
+
+Benefício:
+- organiza processos de negócio em passos claros e testáveis.
+
+---
+
+## 9) Como ler o código sem se perder (roteiro de estudo)
+
+Ordem recomendada:
+
+1. `app/main.py`
+2. `app/interfaces/api/whatsapp_webhook.py`
+3. `app/interfaces/dependencies.py`
+4. `app/application/use_cases/handle_whatsapp_message.py`
+5. `app/application/use_cases/conversation.py`
+6. `app/application/use_cases/checkin_via_whatsapp.py`
+7. `app/application/use_cases/confirm_reservation.py`
+8. `app/domain/entities/reservation/reservation.py`
+9. `app/infrastructure/persistence/sql/reservation_repository_sql.py`
+10. `app/infrastructure/cache/redis_repository.py`
+11. `app/infrastructure/ai/openai_client.py`
+
+---
+
+## 10) Onde estão os pontos críticos para evoluir
+
+1. Encapsular troca de quarto no domínio (evitar mutação direta no use case).
+2. Remover `to_dict()` de entidades para mappers externos.
+3. Separar melhor roteamento de intenção por estratégia/comando.
+4. Definir transação/sessão por requisição de forma mais controlada.
+
+---
+
+## 11) Resumo final em 5 linhas
+
+1. Webhook recebe mensagem e cria DTO.
+2. Use case principal decide o fluxo.
+3. Subfluxo aplica regras de domínio.
+4. Repositórios/adapters fazem persistência, cache e IA.
+5. Interface envia resposta ao usuário.
+
+---
+
+## 12) Tracing real (debug guiado, variável por variável)
+
+Nesta seção vamos simular mensagens reais e seguir cada chamada.
+
+Importante:
+- os valores abaixo são exemplos didáticos;
+- o caminho/métodos está 100% alinhado ao código atual.
+
+### 12.1 Cenário A: usuário manda “quero confirmar minha reserva”
+
+#### Entrada do webhook (Twilio)
+
+`receive_twilio_whatsapp_message()` recebe `form_data` com:
+
+- `From = "whatsapp:+5561998776092"`
+- `Body = "quero confirmar minha reserva"`
+
+Transformação na interface:
+
+- `from_phone = " +5561998776092"` (sem prefixo `whatsapp:`)
+- `message_body = "quero confirmar minha reserva"`
+- DTO criado:
+	- `WhatsAppMessageRequestDTO.phone = "+5561998776092"`
+	- `WhatsAppMessageRequestDTO.message = "quero confirmar minha reserva"`
+	- `WhatsAppMessageRequestDTO.source = "twilio"`
+
+#### Passo no `HandleWhatsAppMessageUseCase.execute()`
+
+Valores locais no início:
+
+- `text = "quero confirmar minha reserva"`
+- `content_lower = "quero confirmar minha reserva"`
+- `phone = "+5561998776092"`
+
+1) `_get_flow_state(phone)`
+- chave consultada: `flow:+5561998776092`
+- retorno esperado no primeiro contato: `None`
+
+2) `_is_confirm_reservation_intent(content_lower)`
+- `has_confirm = True` (porque tem “confirmar”)
+- `has_reservation = True` (porque tem “reserva”)
+- resultado: `True`
+
+3) chama `_start_confirm_reservation_flow(phone)`
+
+#### Passo no `ConfirmReservationUseCase.prepare_confirmation()`
+
+1) `reservation_repository.find_by_phone_number(phone)`
+- consulta SQL retorna última reserva do telefone.
+
+Exemplo de objeto de domínio retornado:
+- `reservation.id = "123"`
+- `reservation.status = ReservationStatus.PENDING`
+- `reservation.room_number = "101"`
+- `reservation.total_amount = 600.0`
+
+2) validações de status:
+- não está em `CANCELLED/NO_SHOW/CHECKED_OUT`
+- não está `CONFIRMED`
+- então `can_confirm = True`
+
+3) retorno DTO:
+- `ConfirmReservationResponseDTO.success = True`
+- `ConfirmReservationResponseDTO.can_confirm = True`
+- `ConfirmReservationResponseDTO.summary = "Resumo..."`
+
+#### Volta para `_start_confirm_reservation_flow`
+
+1) grava estado do fluxo no cache:
+- chave: `flow:+5561998776092`
+- valor:
+	- `{"action": "confirm_reservation", "step": "summary_displayed"}`
+- TTL: `900`
+
+2) monta resposta:
+- resumo formatado (`get_formatted_summary`)
+- texto final com “SIM / NÃO / EDITAR”
+
+3) retorna:
+- `WhatsAppMessageResponseDTO.reply = "...SIM / NÃO / EDITAR"`
+- `WhatsAppMessageResponseDTO.success = True`
+
+4) webhook envia ao usuário via Twilio/Meta.
+
+### 12.2 Cenário B: usuário responde “SIM”
+
+#### Entrada
+
+- `WhatsAppMessageRequestDTO.message = "SIM"`
+- `phone = "+5561998776092"`
+
+#### Passo no `HandleWhatsAppMessageUseCase.execute()`
+
+1) `_get_flow_state(phone)` retorna:
+- `{"action": "confirm_reservation", "step": "summary_displayed"}`
+
+2) cai em `_handle_confirm_reservation_flow(...)`
+
+3) como `current_step == "summary_displayed"`, chama `_handle_summary_response(...)`
+
+4) `_is_positive_confirmation("sim")` -> `True`
+
+5) limpa estado:
+- `cache_repository.delete("flow:+5561998776092")`
+
+6) chama `confirm_reservation_use_case.confirm(...)`
+
+#### Passo no `ConfirmReservationUseCase.confirm()`
+
+1) busca reserva no repositório.
+2) valida estado novamente.
+3) chama regra de domínio: `reservation.confirm()`.
+
+Efeito esperado no domínio:
+- antes: `ReservationStatus.PENDING`
+- depois: `ReservationStatus.CONFIRMED`
+
+4) persiste com `reservation_repository.save(reservation)`.
+
+No SQL adapter (`ReservationRepositorySQL.save`):
+- faz update dos campos
+- executa `self.session.commit()`
+
+5) retorna DTO:
+- `message = "Reserva confirmada com sucesso."`
+- `success = True`
+
+6) `HandleWhatsAppMessageUseCase` retorna:
+- `reply = "✅ Reserva confirmada com sucesso."`
+
+### 12.3 Cenário C: fluxo de conversa IA (“quero toalha extra”)
+
+#### Entrada
+
+- `phone = "+5561998776092"`
+- `text = "quero toalha extra"`
+
+#### Passo no `HandleWhatsAppMessageUseCase.execute()`
+
+- não há intenção de confirmação/check-in explícita
+- cai no fallback de conversa:
+	- `conversation_use_case.execute(phone, text)`
+
+#### Passo no `ConversationUseCase.execute()`
+
+1) `_get_conversation_history(phone)`
+- cache key: `+5561998776092`
+- exemplo retorno: `[{"role":"user","content":"oi"}, {"role":"assistant","content":"olá"}]`
+
+2) reidrata para `Message`.
+
+3) adiciona nova mensagem:
+- `Message(role="user", content="quero toalha extra")`
+
+4) `_call_ai(messages, phone)`
+- busca contexto hotel (`HotelContextService.get_context()`)
+- busca contexto reserva (`ReservationContextService.get_context_for_phone(phone)`)
+- monta `system_message`
+- injeta no início de `message_dicts`
+- chama `AIService.chat(message_dicts)` -> `OpenAIClient.chat(...)`
+
+5) recebe `ai_response` (exemplo):
+- `"Claro! Vou solicitar toalhas extras para seu quarto."`
+
+6) adiciona `Message(role="assistant", content=ai_response)`.
+
+7) `_update_conversation_history(phone, messages)`
+- salva no Redis com TTL `3600`.
+
+8) `_log_interaction(...)`
+- calcula tokens estimados
+- chama `InteractionLogger.log_interaction(...)`
+
+9) retorna string da resposta para webhook enviar.
+
+---
+
+## 13) Diagramas de tracing
+
+### 13.1 Tracing da confirmação (mensagem -> SIM)
+
+```mermaid
+sequenceDiagram
+  participant User as Usuario
+  participant Webhook as whatsapp_webhook.py
+  participant Handle as HandleWhatsAppMessageUseCase
+  participant Confirm as ConfirmReservationUseCase
+  participant Repo as ReservationRepositorySQL
+  participant Cache as RedisRepository
+  participant DB as PostgreSQL
+
+  User->>Webhook: Quero confirmar minha reserva
+  Webhook->>Handle: execute(WhatsAppMessageRequestDTO)
+  Handle->>Cache: get(flow:+phone)
+  Cache-->>Handle: None
+  Handle->>Confirm: prepare_confirmation(phone)
+  Confirm->>Repo: find_by_phone_number(phone)
+  Repo->>DB: SELECT reservation
+  DB-->>Repo: row
+  Repo-->>Confirm: Reservation(PENDING)
+  Confirm-->>Handle: can_confirm True e summary
+  Handle->>Cache: set(flow:+phone, summary_displayed, ttl 900)
+  Handle-->>Webhook: reply SIM NAO EDITAR
+  Webhook-->>User: pergunta confirmacao
+
+  User->>Webhook: SIM
+  Webhook->>Handle: execute(WhatsAppMessageRequestDTO)
+  Handle->>Cache: get(flow:+phone)
+  Cache-->>Handle: summary_displayed
+  Handle->>Cache: delete(flow:+phone)
+  Handle->>Confirm: confirm(phone)
+  Confirm->>Repo: find_by_phone_number(phone)
+  Repo->>DB: SELECT reservation
+  DB-->>Repo: row
+  Repo-->>Confirm: Reservation(PENDING)
+  Confirm->>Confirm: reservation.confirm()
+  Confirm->>Repo: save(reservation)
+  Repo->>DB: UPDATE status CONFIRMED e COMMIT
+  Confirm-->>Handle: success True
+  Handle-->>Webhook: Reserva confirmada com sucesso
+  Webhook-->>User: resposta final
+```
+
+Arquivo fonte: `docs/diagrams/06-confirmation-tracing-sequence.mmd`
+
+### 13.2 Tracing da conversa IA
+
+```mermaid
+sequenceDiagram
+  participant User as Usuario
+  participant Handle as HandleWhatsAppMessageUseCase
+  participant Conv as ConversationUseCase
+  participant Redis as RedisRepository
+  participant HotelCtx as HotelContextService
+  participant ResCtx as ReservationContextService
+  participant AI as OpenAIClient
+  participant Logger as ConversationLogger
+
+  User->>Handle: Quero toalha extra
+  Handle->>Conv: execute(phone, text)
+  Conv->>Redis: get(phone)
+  Redis-->>Conv: history
+  Conv->>HotelCtx: get_context()
+  HotelCtx-->>Conv: contexto hotel
+  Conv->>ResCtx: get_context_for_phone(phone)
+  ResCtx-->>Conv: contexto reserva
+  Conv->>AI: chat(messages e contexto)
+  AI-->>Conv: response.content
+  Conv->>Redis: set(phone, history atualizado, ttl 3600)
+  Conv->>Logger: log_interaction(...)
+  Conv-->>Handle: texto final
+```
+
+Arquivo fonte: `docs/diagrams/07-ai-tracing-sequence.mmd`
+
+---
+
+## 14) Checklist mental para você depurar qualquer mensagem
+
+Quando algo falhar, sempre pergunte nesta ordem:
+
+1. O webhook recebeu a mensagem?
+2. O DTO foi criado com `phone` e `message` corretos?
+3. O `HandleWhatsAppMessageUseCase` escolheu o fluxo esperado?
+4. Havia `flow_state` em cache atrapalhando o caminho?
+5. O use case chamou o método de domínio correto?
+6. O repositório persistiu com `commit()`?
+7. A resposta voltou para o webhook e foi enviada ao provedor?
+
+Se você seguir esse checklist, você sempre descobre em qual camada está o problema.

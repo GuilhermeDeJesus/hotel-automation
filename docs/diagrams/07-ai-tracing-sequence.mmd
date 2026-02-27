@@ -1,0 +1,23 @@
+sequenceDiagram
+  participant User as Usuario
+  participant Handle as HandleWhatsAppMessageUseCase
+  participant Conv as ConversationUseCase
+  participant Redis as RedisRepository
+  participant HotelCtx as HotelContextService
+  participant ResCtx as ReservationContextService
+  participant AI as OpenAIClient
+  participant Logger as ConversationLogger
+
+  User->>Handle: Quero toalha extra
+  Handle->>Conv: execute(phone, text)
+  Conv->>Redis: get(phone)
+  Redis-->>Conv: history
+  Conv->>HotelCtx: get_context()
+  HotelCtx-->>Conv: contexto hotel
+  Conv->>ResCtx: get_context_for_phone(phone)
+  ResCtx-->>Conv: contexto reserva
+  Conv->>AI: chat(messages e contexto)
+  AI-->>Conv: response.content
+  Conv->>Redis: set(phone, history atualizado, ttl 3600)
+  Conv->>Logger: log_interaction(...)
+  Conv-->>Handle: texto final

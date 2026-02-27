@@ -15,8 +15,10 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from pathlib import Path
 
+from app.application.services.interaction_logger import InteractionLogger
 
-class ConversationLogger:
+
+class ConversationLogger(InteractionLogger):
     """
     Mantém registro persistente de todas as conversas em JSON.
     

@@ -1,16 +1,16 @@
 from app.application.dto.checkin_request_dto import CheckinRequestDTO
 from app.application.dto.checkin_response_dto import CheckinResponseDTO
+from app.domain.repositories.cache_repository import CacheRepository
 from app.domain.repositories.reservation_repository import ReservationRepository
-from app.infrastructure.cache.redis_repository import RedisRepository
 
 # Orquestração
 class CheckInViaWhatsAppUseCase:
-    def __init__(self, reservation_repository: ReservationRepository, cache_repository: RedisRepository):
+    def __init__(self, reservation_repository: ReservationRepository, cache_repository: CacheRepository):
         self.reservation_repository = reservation_repository
         self.cache_repository = cache_repository
     
     # O ponto: CheckInViaWhatsAppUseCase espera um ReservationRepository, não especificamente um ReservationRepositorySQL. Se amanhã você quiser trocar para MongoDB, cria ReservationRepositoryMongo, e o use-case continua funcionando sem mudança.
-    def execute(self, request_dto: CheckinRequestDTO) -> CheckinRequestDTO:
+    def execute(self, request_dto: CheckinRequestDTO) -> CheckinResponseDTO:
         # ✅ ORQUESTRA: Verifica cache primeiro?
         # Verificar se a reserva está no cache
         cached_reservation = self.cache_repository.get(request_dto.phone_number)

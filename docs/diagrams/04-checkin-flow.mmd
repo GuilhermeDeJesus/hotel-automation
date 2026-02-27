@@ -1,0 +1,12 @@
+flowchart TD
+  A[Mensagem com check-in] --> B[HandleWhatsAppMessageUseCase]
+  B --> C[CheckInViaWhatsAppUseCase.execute]
+  C --> D{Tem cache}
+  D -- Sim --> E[Retorna sucesso cache]
+  D -- Não --> F[ReservationRepository.find_by_phone_number]
+  F --> G{Reserva existe}
+  G -- Não --> H[Retorna não encontrada]
+  G -- Sim --> I[Reservation.check_in]
+  I --> J[ReservationRepository.save]
+  J --> K[CacheRepository.set]
+  K --> L[Retorna sucesso]

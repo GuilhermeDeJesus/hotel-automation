@@ -1,0 +1,12 @@
+flowchart TD
+  A[Webhook recebe mensagem] --> B[HandleWhatsAppMessageUseCase.execute]
+  B --> C[ConversationUseCase.execute]
+  C --> D[CacheRepository.get(phone)]
+  C --> E[HotelContextService.get_context]
+  C --> F[ReservationContextService.get_context_for_phone]
+  C --> G[AIService.chat]
+  G --> H[OpenAIClient.chat para OpenAI API]
+  C --> I[CacheRepository.set(phone, history)]
+  C --> J[InteractionLogger.log_interaction]
+  C --> K[Retorna resposta]
+  K --> L[Webhook envia mensagem ao usuário]

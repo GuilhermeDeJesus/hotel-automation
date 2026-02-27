@@ -3,8 +3,9 @@ SQL implementation of RoomRepository - manages room data access.
 """
 from typing import Optional, List
 from datetime import date
-from sqlalchemy import and_, or_
+from sqlalchemy import and_
 
+from app.domain.entities.room.room import Room
 from app.domain.repositories.room_repository import RoomRepository
 from .models import RoomModel, ReservationModel
 
@@ -15,7 +16,7 @@ class RoomRepositorySQL(RoomRepository):
     def __init__(self, session):
         self.session = session
 
-    def get_by_number(self, room_number: str) -> Optional[dict]:
+    def get_by_number(self, room_number: str) -> Optional[Room]:
         """Retrieve room by number."""
         room = (
             self.session.query(RoomModel)
@@ -26,17 +27,11 @@ class RoomRepositorySQL(RoomRepository):
         if not room:
             return None
 
-        return {
-            "number": room.number,
-            "type": room.room_type,
-            "daily_rate": room.daily_rate,
-            "max_guests": room.max_guests,
-            "status": room.status,
-        }
+        return self._to_domain(room)
 
     def find_available(
         self, check_in: date, check_out: date, exclude_room: Optional[str] = None
-    ) -> List[dict]:
+    ) -> List[Room]:
         """Find available rooms for a date range."""
         # Query all active rooms
         available_rooms = (
@@ -45,7 +40,7 @@ class RoomRepositorySQL(RoomRepository):
             .all()
         )
 
-        available_list = []
+        available_list: List[Room] = []
 
         for room in available_rooms:
             # Exclude specific room if provided
@@ -68,14 +63,7 @@ class RoomRepositorySQL(RoomRepository):
             ) is not None
 
             if not has_conflict:
-                available_list.append(
-                    {
-                        "number": room.number,
-                        "type": room.room_type,
-                        "daily_rate": room.daily_rate,
-                        "max_guests": room.max_guests,
-                    }
-                )
+                available_list.append(self._to_domain(room))
 
         return available_list
 
@@ -108,3 +96,13 @@ class RoomRepositorySQL(RoomRepository):
         ) is not None
 
         return not has_conflict
+
+    @staticmethod
+    def _to_domain(room_model: RoomModel) -> Room:
+        return Room(
+            number=room_model.number,
+            room_type=room_model.room_type,
+            daily_rate=room_model.daily_rate,
+            max_guests=room_model.max_guests,
+            status=room_model.status,
+        )

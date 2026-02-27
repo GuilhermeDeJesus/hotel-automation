@@ -1,0 +1,39 @@
+sequenceDiagram
+  participant User as Usuario
+  participant Webhook as whatsapp_webhook.py
+  participant Handle as HandleWhatsAppMessageUseCase
+  participant Confirm as ConfirmReservationUseCase
+  participant Repo as ReservationRepositorySQL
+  participant Cache as RedisRepository
+  participant DB as PostgreSQL
+
+  User->>Webhook: Quero confirmar minha reserva
+  Webhook->>Handle: execute(WhatsAppMessageRequestDTO)
+  Handle->>Cache: get(flow:+phone)
+  Cache-->>Handle: None
+  Handle->>Confirm: prepare_confirmation(phone)
+  Confirm->>Repo: find_by_phone_number(phone)
+  Repo->>DB: SELECT reservation
+  DB-->>Repo: row
+  Repo-->>Confirm: Reservation(PENDING)
+  Confirm-->>Handle: can_confirm True e summary
+  Handle->>Cache: set(flow:+phone, summary_displayed, ttl 900)
+  Handle-->>Webhook: reply SIM NAO EDITAR
+  Webhook-->>User: pergunta confirmacao
+
+  User->>Webhook: SIM
+  Webhook->>Handle: execute(WhatsAppMessageRequestDTO)
+  Handle->>Cache: get(flow:+phone)
+  Cache-->>Handle: summary_displayed
+  Handle->>Cache: delete(flow:+phone)
+  Handle->>Confirm: confirm(phone)
+  Confirm->>Repo: find_by_phone_number(phone)
+  Repo->>DB: SELECT reservation
+  DB-->>Repo: row
+  Repo-->>Confirm: Reservation(PENDING)
+  Confirm->>Confirm: reservation.confirm()
+  Confirm->>Repo: save(reservation)
+  Repo->>DB: UPDATE status CONFIRMED e COMMIT
+  Confirm-->>Handle: success True
+  Handle-->>Webhook: Reserva confirmada com sucesso
+  Webhook-->>User: resposta final

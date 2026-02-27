@@ -1,0 +1,8 @@
+flowchart LR
+  U[Usuário WhatsApp] --> I[Interfaces]
+  I --> A[Application]
+  A --> D[Domain]
+  A --> INF[Infrastructure]
+  INF --> A
+  A --> I
+  I --> U
