@@ -9,21 +9,25 @@ META_ACCESS_TOKEN=...
 PHONE_NUMBER_ID=...
 WEBHOOK_VERIFY_TOKEN=...
 OPENAI_API_KEY=...
-DATABASE_URL=...
-REDIS_HOST=localhost
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=hotel
+DATABASE_URL=postgresql://postgres:postgres@db:5432/hotel
+REDIS_HOST=redis
 REDIS_PORT=6379
+NGROK_AUTHTOKEN=...
 ```
 
-## 2) Suba a API
+## 2) Suba stack com túnel
 
 ```bash
-python -m uvicorn app.main:app --reload --port 8000
+docker compose --profile tunnel up -d --build
 ```
 
-## 3) Exponha com ngrok
+## 3) Pegue URL pública do ngrok
 
 ```bash
-ngrok http 8000
+curl -s http://localhost:4040/api/tunnels
 ```
 
 ## 4) Configure no Meta
@@ -34,3 +38,7 @@ Verify token: mesmo valor do `.env`
 ## 5) Teste
 
 Envie mensagem no WhatsApp e confirme resposta automática.
+
+## Nota de depreciação
+
+Fluxo local manual com `ngrok http 8000` não é o caminho recomendado. O padrão do repositório é `docker compose --profile tunnel up`.

@@ -1,8 +1,8 @@
 """
 Redis implementation of CacheRepository.
 
-Connects to a hosted Redis instance (e.g., Redis Cloud) and provides
-cache operations for conversation history and temporary data.
+Connects to Redis and provides cache operations for conversation history
+and temporary data.
 """
 import os
 import redis
@@ -42,18 +42,25 @@ class RedisRepository(CacheRepository):
             password: Redis password (from REDIS_PASSWORD env var if not provided)
             decode_responses: Whether to decode responses to strings
         """
-        self.host = host or os.getenv("REDIS_HOST", "redis-10759.c11.us-east-1-3.ec2.cloud.redislabs.com")
-        self.port = port or int(os.getenv("REDIS_PORT", 10759))
-        self.username = username or os.getenv("REDIS_USERNAME", "default")
-        self.password = password or os.getenv("REDIS_PASSWORD", "REDIS_PASSWORD")
+        self.host = host or os.getenv("REDIS_HOST", "localhost")
+        self.port = int(port or os.getenv("REDIS_PORT", 6379))
+        self.username = username if username is not None else os.getenv("REDIS_USERNAME")
+        self.password = password if password is not None else os.getenv("REDIS_PASSWORD")
         
         try:
+            connection_kwargs = {
+                "host": self.host,
+                "port": self.port,
+                "decode_responses": decode_responses,
+            }
+
+            if self.username:
+                connection_kwargs["username"] = self.username
+            if self.password:
+                connection_kwargs["password"] = self.password
+
             self.client = redis.Redis(
-                host=self.host,
-                port=self.port,
-                username=self.username,
-                password=self.password,
-                decode_responses=decode_responses
+                **connection_kwargs
             )
             # Test connection
             self.client.ping()

@@ -65,6 +65,18 @@ class ReservationModel(Base):
     # Notas adicionais
     notes = Column(Text)
 
+    # 6.1 Check-in antecipado
+    guest_document = Column(String(20))
+    estimated_arrival_time = Column(String(10))
+    pre_checkin_completed_at = Column(DateTime)
+
+    # 6.4 Self-check-in e chave digital
+    digital_key_code = Column(String(20))
+
+    # 6.8 Segurança e compliance (LGPD)
+    consent_terms_accepted_at = Column(DateTime)
+    consent_marketing = Column(Boolean, default=False)
+
     # Relacionamentos
     customer = relationship("CustomerModel", back_populates="reservations")
     payments = relationship("PaymentModel", back_populates="reservation")
@@ -108,6 +120,8 @@ class HotelModel(Base):
     child_policy = Column(Text, nullable=False)
     amenities = Column(Text, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    requires_payment_for_confirmation = Column(Boolean, default=False, nullable=False)
+    allows_reservation_without_payment = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
@@ -121,4 +135,100 @@ class ConversationCacheModel(Base):
     context_data = Column(Text)  # JSON string
     last_message = Column(Text)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class LeadModel(Base):
+    """Tabela de leads SaaS para acompanhamento de funil."""
+    __tablename__ = "saas_leads"
+
+    id = Column(String, primary_key=True)
+    phone_number = Column(String(20), nullable=False, unique=True, index=True)
+    source = Column(String(20), nullable=False, index=True, default="unknown")
+    stage = Column(String(40), nullable=False, index=True, default="NEW")
+    message_count = Column(Integer, nullable=False, default=0)
+    first_seen_at = Column(DateTime, default=datetime.now, nullable=False, index=True)
+    last_seen_at = Column(DateTime, default=datetime.now, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class AnalyticsEventModel(Base):
+    """Tabela de eventos analíticos para KPI e funil."""
+    __tablename__ = "saas_analytics_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    phone_number = Column(String(20), nullable=False, index=True)
+    source = Column(String(20), nullable=False, index=True, default="unknown")
+    event_type = Column(String(50), nullable=False, index=True)
+    success = Column(Boolean, nullable=False, default=True)
+    response_time_ms = Column(Integer, nullable=True)
+    details = Column(Text)
+    created_at = Column(DateTime, default=datetime.now, nullable=False, index=True)
+
+
+class SaaSAdminAuditEventModel(Base):
+    """Tabela de auditoria administrativa para operações SaaS."""
+    __tablename__ = "saas_admin_audit_events"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    event_type = Column(String(80), nullable=False, index=True)
+    client_ip = Column(String(80), nullable=False, index=True)
+    outcome = Column(String(40), nullable=False, index=True)
+    deleted_keys = Column(Integer, nullable=True)
+    retry_after = Column(Integer, nullable=True)
+    reason = Column(String(120), nullable=True)
+    created_at = Column(DateTime, default=datetime.now, nullable=False, index=True)
+
+
+class SupportTicketModel(Base):
+    """6.6 Resolução de problemas - tickets de suporte."""
+    __tablename__ = "support_tickets"
+
+    id = Column(String, primary_key=True)
+    reservation_id = Column(String, ForeignKey("reservations.id"), nullable=False, index=True)
+    description = Column(Text, nullable=False)
+    category = Column(String(50), nullable=False)
+    status = Column(String(20), nullable=False, index=True, default="OPEN")
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    resolved_at = Column(DateTime)
+
+
+class RoomOrderModel(Base):
+    """6.5 Pedidos durante a estadia (room service)."""
+    __tablename__ = "room_orders"
+
+    id = Column(String, primary_key=True)
+    reservation_id = Column(String, ForeignKey("reservations.id"), nullable=False, index=True)
+    items_json = Column(Text, nullable=False)
+    total_amount = Column(Float, nullable=False)
+    status = Column(String(20), nullable=False, default="PENDING")
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
+
+
+class ProactiveMessageLogModel(Base):
+    """6.2 Comunicação proativa - log de mensagens enviadas."""
+    __tablename__ = "proactive_message_log"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    reservation_id = Column(String, nullable=False, index=True)
+    message_type = Column(String(50), nullable=False)
+    sent_at = Column(DateTime, default=datetime.now, nullable=False)
+
+
+class SaaSAuditMetricsSnapshotModel(Base):
+    """Snapshot diário das métricas agregadas de auditoria SaaS."""
+    __tablename__ = "saas_audit_metrics_snapshots"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    snapshot_date = Column(Date, nullable=False, unique=True, index=True)
+    total_attempts = Column(Integer, nullable=False, default=0)
+    rate_limited_count = Column(Integer, nullable=False, default=0)
+    rate_limited_ratio = Column(Float, nullable=False, default=0.0)
+    alert_status = Column(String(20), nullable=False, default="healthy")
+    warning_threshold = Column(Float, nullable=False, default=0.2)
+    critical_threshold = Column(Float, nullable=False, default=0.5)
+    by_outcome_json = Column(Text, nullable=False, default="{}")
+    top_ips_json = Column(Text, nullable=False, default="[]")
+    created_at = Column(DateTime, default=datetime.now, nullable=False, index=True)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

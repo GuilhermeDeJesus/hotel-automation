@@ -8,12 +8,20 @@ Configuração mínima para Twilio chamar sua API.
 
 ## Configuração
 
-1. Subir API local.
-2. Expor URL pública com ngrok.
+1. Subir stack com profile de túnel: `docker compose --profile tunnel up -d --build`.
+2. Obter URL pública: `curl -s http://localhost:4040/api/tunnels`.
 3. Configurar URL no Twilio Sandbox.
 4. Definir método `HTTP POST`.
+
+URL final esperada no Twilio:
+
+`https://SEU_DOMINIO_NGROK/webhook/whatsapp/twilio`
 
 ## Validação
 
 - Entrada de mensagem aparece nos logs.
 - Resposta retorna ao usuário via WhatsApp.
+
+## Nota de depreciação
+
+Passo genérico de `ngrok` manual foi descontinuado na documentação principal em favor do fluxo Docker padronizado.

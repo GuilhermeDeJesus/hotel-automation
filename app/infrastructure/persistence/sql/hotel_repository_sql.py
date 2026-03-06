@@ -32,6 +32,12 @@ class HotelRepositorySQL(HotelRepository):
             contact_phone=model.contact_phone,
             policies=policies,
             is_active=model.is_active,
+            requires_payment_for_confirmation=getattr(
+                model, "requires_payment_for_confirmation", False
+            ),
+            allows_reservation_without_payment=getattr(
+                model, "allows_reservation_without_payment", True
+            ),
         )
 
     def save(self, hotel: Hotel) -> None:
@@ -50,6 +56,14 @@ class HotelRepositorySQL(HotelRepository):
             existing.child_policy = hotel.policies.child_policy
             existing.amenities = hotel.policies.amenities
             existing.is_active = hotel.is_active
+            if hasattr(hotel, "requires_payment_for_confirmation"):
+                existing.requires_payment_for_confirmation = (
+                    hotel.requires_payment_for_confirmation
+                )
+            if hasattr(hotel, "allows_reservation_without_payment"):
+                existing.allows_reservation_without_payment = (
+                    hotel.allows_reservation_without_payment
+                )
         else:
             new_row = HotelModel(
                 id=hotel.id,
@@ -63,7 +77,13 @@ class HotelRepositorySQL(HotelRepository):
                 child_policy=hotel.policies.child_policy,
                 amenities=hotel.policies.amenities,
                 is_active=hotel.is_active,
+                requires_payment_for_confirmation=getattr(
+                    hotel, "requires_payment_for_confirmation", False
+                ),
+                allows_reservation_without_payment=getattr(
+                    hotel, "allows_reservation_without_payment", True
+                ),
             )
             self.session.add(new_row)
 
-        self.session.flush()
+        self.session.commit()

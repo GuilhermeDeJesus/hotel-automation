@@ -14,10 +14,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def setup_test_db():
-    url = os.getenv("DATABASE_URL")
-    if not url:
-        url = "sqlite:///:memory:"
-    engine = create_engine(url)
+    """Usa TEST_DATABASE_URL ou DATABASE_URL ou sqlite em memória."""
+    url = os.getenv("TEST_DATABASE_URL") or os.getenv("DATABASE_URL") or "sqlite:///:memory:"
+    connect_args = {"check_same_thread": False} if "sqlite" in url else {}
+    engine = create_engine(url, connect_args=connect_args)
     Base.metadata.create_all(bind=engine)
     return sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -111,6 +111,26 @@ def test_save_updates_latest_reservation_for_same_phone():
     assert found is not None
     assert found.id == latest.id
     assert found.status == ReservationStatus.CONFIRMED
+
+
+def test_find_by_phone_number_normalizes_input_format():
+    Session = setup_test_db()
+    session = Session()
+    repo = ReservationRepositorySQL(session)
+
+    phone_digits = "556198776092"
+    reservation = Reservation(
+        reservation_id="",
+        guest_name="Format Guest",
+        guest_phone=PhoneNumber(phone_digits),
+        status=ReservationStatus.PENDING,
+    )
+    repo.save(reservation)
+
+    found = repo.find_by_phone_number("+55 (61) 98776-092")
+
+    assert found is not None
+    assert str(found.guest_phone) == phone_digits
 
 
 if __name__ == "__main__":

@@ -9,6 +9,9 @@ Resumo consolidado do que está operacional no projeto.
 - Persistência SQL com Alembic.
 - Cache Redis para suporte aos fluxos.
 - Casos de uso de check-in, confirmação e conversa.
+- Infra Docker padronizada (`app`, `db`, `redis`, profile `tunnel` para ngrok).
+- Endpoint de saúde `GET /health` e healthchecks no compose.
+- Testes unitários, integração real (Redis) e E2E de negócio (PostgreSQL + Redis).
 
 ## Referências principais
 

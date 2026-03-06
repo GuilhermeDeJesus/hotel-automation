@@ -4,16 +4,16 @@ Validação ponta a ponta em poucos passos.
 
 ## Passos
 
-1. Inicie API:
+1. Suba stack com túnel ngrok:
 
 ```bash
-python -m uvicorn app.main:app --reload --port 8000
+docker compose --profile tunnel up -d --build
 ```
 
-2. Inicie túnel:
+2. Obtenha URL pública:
 
 ```bash
-ngrok http 8000
+curl -s http://localhost:4040/api/tunnels
 ```
 
 3. Configure Twilio Sandbox para:
@@ -26,3 +26,14 @@ ngrok http 8000
 
 - Logs com marcador `[TWILIO]`.
 - Requisição `200` no túnel.
+
+## Comandos úteis
+
+```bash
+make whatsapp-test
+make logs
+```
+
+## Nota de depreciação
+
+Fluxo manual `uvicorn` + `ngrok http 8000` foi substituído pelo fluxo Docker com profile `tunnel`.

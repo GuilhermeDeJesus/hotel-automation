@@ -6,19 +6,38 @@ This is the single place where concrete implementations are instantiated.
 All other layers work with abstractions (interfaces).
 """
 import os
+from collections.abc import Generator
 
 from app.infrastructure.persistence.sql.database import SessionLocal, init_db
 from app.infrastructure.persistence.sql.reservation_repository_sql import ReservationRepositorySQL
 from app.infrastructure.persistence.sql.hotel_repository_sql import HotelRepositorySQL
 from app.infrastructure.persistence.sql.room_repository_sql import RoomRepositorySQL
+from app.infrastructure.persistence.sql.hotel_repository_sql import HotelRepositorySQL
+from app.infrastructure.persistence.sql.saas_repository_sql import SaaSRepositorySQL
+from app.infrastructure.persistence.sql.payment_repository_sql import PaymentRepositorySQL
+from app.infrastructure.payment.payment_provider_factory import get_payment_provider
 from app.infrastructure.persistence.memory.reservation_repository_memory import ReservationRepositoryMemory
 from app.infrastructure.cache.redis_repository import RedisRepository
 from app.infrastructure.ai.openai_client import OpenAIClient
 from app.infrastructure.logging.conversation_logger import ConversationLogger
+from app.application.use_cases.cancel_reservation import CancelReservationUseCase
 from app.application.use_cases.checkin_via_whatsapp import CheckInViaWhatsAppUseCase
+from app.application.use_cases.create_reservation import CreateReservationUseCase
+from app.application.use_cases.checkout_via_whatsapp import CheckoutViaWhatsAppUseCase
 from app.application.use_cases.handle_whatsapp_message import HandleWhatsAppMessageUseCase
 from app.application.use_cases.confirm_reservation import ConfirmReservationUseCase
 from app.application.use_cases.conversation import ConversationUseCase
+from app.application.use_cases.extend_reservation import ExtendReservationUseCase
+from app.application.use_cases.get_saas_dashboard import GetSaaSDashboardUseCase
+from app.application.use_cases.get_journey_funnel import GetJourneyFunnelUseCase
+from app.application.use_cases.handle_payment_webhook import HandlePaymentWebhookUseCase
+from app.application.use_cases.pre_checkin import PreCheckInUseCase
+from app.application.use_cases.create_support_ticket import CreateSupportTicketUseCase
+from app.application.use_cases.room_order import RoomOrderUseCase
+from app.infrastructure.persistence.sql.support_ticket_repository_sql import (
+    SupportTicketRepositorySQL,
+    RoomOrderRepositorySQL,
+)
 from app.application.services.reservation_context_service import ReservationContextService
 from app.application.services.hotel_context_service import HotelContextService
 
@@ -191,14 +210,84 @@ def get_whatsapp_message_use_case() -> HandleWhatsAppMessageUseCase:
     session = SessionLocal()
     reservation_repo = ReservationRepositorySQL(session)
     room_repo = RoomRepositorySQL(session)
-    
-    confirm_reservation_use_case = ConfirmReservationUseCase(reservation_repo)
-    cache_repository = RedisRepository()
-    
-    return HandleWhatsAppMessageUseCase(
-        checkin_use_case=checkin_use_case,
-        conversation_use_case=conversation_use_case,
-        confirm_reservation_use_case=confirm_reservation_use_case,
-        cache_repository=cache_repository,
+    hotel_repo = HotelRepositorySQL(session)
+
+    checkout_use_case = CheckoutViaWhatsAppUseCase(reservation_repository=reservation_repo)
+    cancel_reservation_use_case = CancelReservationUseCase(reservation_repository=reservation_repo)
+    create_reservation_use_case = CreateReservationUseCase(
+        reservation_repository=reservation_repo,
         room_repository=room_repo,
     )
+    confirm_reservation_use_case = ConfirmReservationUseCase(reservation_repo)
+    extend_reservation_use_case = ExtendReservationUseCase(
+        reservation_repository=reservation_repo,
+        room_repository=room_repo,
+    )
+    cache_repository = RedisRepository()
+
+    pre_checkin_use_case = PreCheckInUseCase(reservation_repository=reservation_repo)
+    support_ticket_use_case = CreateSupportTicketUseCase(
+        reservation_repository=reservation_repo,
+        ticket_repository=SupportTicketRepositorySQL(session),
+    )
+    room_order_use_case = RoomOrderUseCase(
+        reservation_repository=reservation_repo,
+        order_repository=RoomOrderRepositorySQL(session),
+    )
+
+    return HandleWhatsAppMessageUseCase(
+        checkin_use_case=checkin_use_case,
+        checkout_use_case=checkout_use_case,
+        cancel_reservation_use_case=cancel_reservation_use_case,
+        create_reservation_use_case=create_reservation_use_case,
+        conversation_use_case=conversation_use_case,
+        confirm_reservation_use_case=confirm_reservation_use_case,
+        extend_reservation_use_case=extend_reservation_use_case,
+        reservation_repository=reservation_repo,
+        cache_repository=cache_repository,
+        room_repository=room_repo,
+        hotel_repository=hotel_repo,
+        payment_provider=get_payment_provider(),
+        payment_repository=PaymentRepositorySQL(session),
+        pre_checkin_use_case=pre_checkin_use_case,
+        support_ticket_use_case=support_ticket_use_case,
+        room_order_use_case=room_order_use_case,
+    )
+
+
+def get_payment_webhook_use_case() -> HandlePaymentWebhookUseCase:
+    """Get HandlePaymentWebhookUseCase com dependências injetadas."""
+    session = SessionLocal()
+    payment_repo = PaymentRepositorySQL(session)
+    reservation_repo = ReservationRepositorySQL(session)
+    return HandlePaymentWebhookUseCase(
+        payment_repository=payment_repo,
+        reservation_repository=reservation_repo,
+    )
+
+
+def get_saas_dashboard_use_case() -> Generator[GetSaaSDashboardUseCase, None, None]:
+    session = SessionLocal()
+    saas_repository = SaaSRepositorySQL(session)
+    cache_repository = RedisRepository()
+    try:
+        yield GetSaaSDashboardUseCase(
+            saas_repository=saas_repository,
+            cache_repository=cache_repository,
+            cache_ttl_seconds=120,
+        )
+    finally:
+        session.close()
+
+
+def get_journey_funnel_use_case() -> Generator[GetJourneyFunnelUseCase, None, None]:
+    session = SessionLocal()
+    saas_repository = SaaSRepositorySQL(session)
+    reservation_repository = ReservationRepositorySQL(session)
+    try:
+        yield GetJourneyFunnelUseCase(
+            saas_repository=saas_repository,
+            reservation_repository=reservation_repository,
+        )
+    finally:
+        session.close()

@@ -15,6 +15,11 @@ Arquivo principal:
 
 - `app/application/use_cases/handle_whatsapp_message.py`
 
+### Nota importante (estado atual)
+
+O fluxo `confirmar reserva` confirma/edita uma reserva já existente no PostgreSQL para o telefone do hóspede.
+Mensagens abertas de IA contendo "reserva" não garantem criação transacional automática de nova reserva.
+
 ## Conceitos implementados
 
 ### 1) Orquestração central (roteador)

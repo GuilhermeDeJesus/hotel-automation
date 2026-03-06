@@ -12,6 +12,8 @@ class Hotel:
         contact_phone: str,
         policies: HotelPolicies,
         is_active: bool = True,
+        requires_payment_for_confirmation: bool = False,
+        allows_reservation_without_payment: bool = True,
     ):
         self.id = hotel_id
         self.name = name
@@ -19,3 +21,5 @@ class Hotel:
         self.contact_phone = contact_phone
         self.policies = policies
         self.is_active = is_active
+        self.requires_payment_for_confirmation = requires_payment_for_confirmation
+        self.allows_reservation_without_payment = allows_reservation_without_payment

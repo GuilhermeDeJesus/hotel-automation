@@ -45,15 +45,32 @@ class DummyMessenger:
         self.sent.append((phone, message))
 
 
+class DummyReservationContextService:
+    def get_context_for_phone(self, phone: str) -> str:
+        return ""
+
+
+class DummyHotelContextService:
+    def get_context(self) -> str:
+        return ""
+
+
 def test_conversation_use_case_single_turn():
     """Test a single turn conversation."""
     ai = AIServiceMock({"hello": "hi there"})
     repo = ReservationRepositoryMemory()
     cache = RedisCacheMock()
     messenger = DummyMessenger()
+    reservation_context_service = DummyReservationContextService()
+    hotel_context_service = DummyHotelContextService()
 
     use_case = ConversationUseCase(
-        ai_service=ai, reservation_repo=repo, cache_repository=cache, messaging=messenger
+        ai_service=ai,
+        reservation_repo=repo,
+        cache_repository=cache,
+        context_service=reservation_context_service,
+        hotel_context_service=hotel_context_service,
+        messaging=messenger,
     )
 
     phone = "556199999999"
@@ -75,9 +92,16 @@ def test_conversation_use_case_multi_turn_with_redis():
     repo = ReservationRepositoryMemory()
     cache = RedisCacheMock()  # Simulates Redis (in-memory for testing)
     messenger = DummyMessenger()
+    reservation_context_service = DummyReservationContextService()
+    hotel_context_service = DummyHotelContextService()
 
     use_case = ConversationUseCase(
-        ai_service=ai, reservation_repo=repo, cache_repository=cache, messaging=messenger
+        ai_service=ai,
+        reservation_repo=repo,
+        cache_repository=cache,
+        context_service=reservation_context_service,
+        hotel_context_service=hotel_context_service,
+        messaging=messenger,
     )
 
     phone = "556199999999"
@@ -119,12 +143,16 @@ def test_conversation_cache_persistence():
     repo = ReservationRepositoryMemory()
     cache = RedisCacheMock()  # shared cache instance
     phone = "556199999999"
+    reservation_context_service = DummyReservationContextService()
+    hotel_context_service = DummyHotelContextService()
 
     # First conversation instance
     uc1 = ConversationUseCase(
         ai_service=ai,
         reservation_repo=repo,
         cache_repository=cache,
+        context_service=reservation_context_service,
+        hotel_context_service=hotel_context_service,
         messaging=None,
     )
     uc1.execute(phone, "hello")
@@ -135,6 +163,8 @@ def test_conversation_cache_persistence():
         ai_service=ai,
         reservation_repo=repo,
         cache_repository=cache,  # same cache!
+        context_service=reservation_context_service,
+        hotel_context_service=hotel_context_service,
         messaging=None,
     )
     uc2.execute(phone, "hello")

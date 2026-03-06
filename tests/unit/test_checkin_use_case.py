@@ -1,44 +1,147 @@
-from app.application.use_cases.checkin_via_whatsapp import CheckInViaWhatsAppUseCase
+from datetime import date, timedelta
+
 from app.application.dto.checkin_request_dto import CheckinRequestDTO
-from app.infrastructure.persistence.memory.reservation_repository_memory import ReservationRepositoryMemory
-from app.infrastructure.cache.redis_repository import RedisRepository
+from app.application.use_cases.checkin_via_whatsapp import CheckInViaWhatsAppUseCase
 from app.domain.entities.reservation.reservation import Reservation
-from app.domain.value_objects.phone_number import PhoneNumber
 from app.domain.entities.reservation.reservation_status import ReservationStatus
+from app.domain.entities.reservation.stay_period import StayPeriod
+from app.domain.value_objects.phone_number import PhoneNumber
+from app.infrastructure.persistence.memory.reservation_repository_memory import (
+    ReservationRepositoryMemory,
+)
 
-def test_checkin_with_cache():
-    # Configurar o repositório de reservas e o cache
+
+class InMemoryCache:
+    def __init__(self):
+        self.store = {}
+
+    def get(self, key: str):
+        return self.store.get(key)
+
+    def set(self, key: str, value, ttl_seconds: int = 3600):
+        self.store[key] = value
+
+    def delete(self, key: str):
+        self.store.pop(key, None)
+
+    def exists(self, key: str) -> bool:
+        return key in self.store
+
+    def clear(self):
+        self.store.clear()
+
+
+def test_checkin_without_reservation():
+    """Quando não há reserva, retorna mensagem apropriada e não grava cache."""
     reservation_repository = ReservationRepositoryMemory()
-    cache_repository = RedisRepository()
-    
-    # Criar uma reserva e armazená-la no repositório
-    reservation = Reservation(reservation_id="1", guest_name="Guilherme de Jesus Silva", guest_phone=PhoneNumber("5561998776092"), status=ReservationStatus.CHECKED_IN)
-    reservation_repository.save(reservation)
-    
-    # Criar o caso de uso
+    cache_repository = InMemoryCache()
+
     checkin_use_case = CheckInViaWhatsAppUseCase(reservation_repository, cache_repository)
-    
-    # Criar o DTO de requisição
+    request_dto = CheckinRequestDTO(phone="5561999999999")
+
+    response = checkin_use_case.execute(request_dto)
+
+    assert response.message == "Nenhuma reserva encontrada para esse numero."
+    cache_key = f"{CheckInViaWhatsAppUseCase.CHECKIN_DONE_KEY_PREFIX}5561999999999"
+    assert cache_repository.get(cache_key) is None
+
+
+def test_checkin_first_call_executes_and_persists():
+    """Primeira chamada executa check-in, persiste e grava cache."""
+    reservation_repository = ReservationRepositoryMemory()
+    cache_repository = InMemoryCache()
+
+    reservation = Reservation(
+        reservation_id="1",
+        guest_name="Hospede Teste",
+        guest_phone=PhoneNumber("5561888777666"),
+        status=ReservationStatus.CONFIRMED,
+    )
+    reservation_repository.save(reservation)
+
+    checkin_use_case = CheckInViaWhatsAppUseCase(reservation_repository, cache_repository)
+    request_dto = CheckinRequestDTO(phone="5561888777666")
+
+    response = checkin_use_case.execute(request_dto)
+
+    assert response.message == "Check-in feito com sucesso!"
+    # Verifica que a reserva foi persistida com status CHECKED_IN
+    persisted = reservation_repository.find_by_phone_number("5561888777666")
+    assert persisted is not None
+    assert persisted.status == ReservationStatus.CHECKED_IN
+    # Verifica que o cache foi gravado
+    cache_key = f"{CheckInViaWhatsAppUseCase.CHECKIN_DONE_KEY_PREFIX}5561888777666"
+    assert cache_repository.get(cache_key) is not None
+
+
+def test_checkin_with_cache_returns_already_done():
+    """Quando cache tem checkin_done, retorna 'já realizou' sem executar check-in."""
+    reservation_repository = ReservationRepositoryMemory()
+    cache_repository = InMemoryCache()
+
+    reservation = Reservation(
+        reservation_id="1",
+        guest_name="Guilherme de Jesus Silva",
+        guest_phone=PhoneNumber("5561998776092"),
+        status=ReservationStatus.CONFIRMED,
+    )
+    reservation_repository.save(reservation)
+
+    checkin_use_case = CheckInViaWhatsAppUseCase(reservation_repository, cache_repository)
     request_dto = CheckinRequestDTO(phone="5561998776092")
-    
-    # Executar o caso de uso pela primeira vez (sem cache)
+
+    # Primeira chamada: executa check-in e grava cache
     response_dto_1 = checkin_use_case.execute(request_dto)
-    print(response_dto_1.message)  # Deve indicar que o check-in foi feito com sucesso
-    
-    # Executar o caso de uso pela segunda vez (com cache)
+    assert response_dto_1.message == "Check-in feito com sucesso!"
+    cache_key = f"{CheckInViaWhatsAppUseCase.CHECKIN_DONE_KEY_PREFIX}5561998776092"
+    assert cache_repository.get(cache_key) is not None
+
+    # Segunda chamada: cache hit, retorna mensagem informativa (não executa check-in de novo)
     response_dto_2 = checkin_use_case.execute(request_dto)
-    print(response_dto_2.message)  # Deve indicar que a reserva foi encontrada no cache e o check-in foi feito com sucesso
-    
-### Esse teste salva algum valor dentro do Redis Cloud ? Se sim, onde posso ver ?
-# Sim, esse teste salva um valor dentro do Redis Cloud. Você pode ver os valores salvos acessando o painel de controle do Redis Cloud, onde você pode visualizar as chaves e os valores armazenados no seu banco de dados Redis. Procure pela chave correspondente ao número de telefone utilizado no teste (neste caso, "1234567890") para verificar se a reserva foi armazenada corretamente no cache do Redis.
-# Coloco o número lá e não aparece nada, tem algum comando para listar as chaves do Redis Cloud ?
-# Para listar as chaves armazenadas no Redis Cloud, você pode usar o comando `KEYS *` no terminal do Redis. Este comando irá retornar todas as chaves armazenadas no banco de dados Redis. Certifique-se de estar conectado ao banco de dados correto e de ter as permissões adequadas para executar esse comando. Se você estiver usando um cliente Redis, como o Redis CLI, basta digitar `KEYS *` e pressionar Enter para ver a lista de chaves disponíveis.
+    assert response_dto_2.message == "Você já realizou o check-in."
 
-### O que aparece quando eu executo o comando `KEYS *` no Redis Cloud ?
-# Quando você executa o comando `KEYS *` no Redis Cloud, ele retorna uma lista de todas as chaves armazenadas no banco de dados Redis. Cada chave representa um item de dados que foi armazenado, e pode ser associada a um valor específico.
-# No contexto do teste que você executou, você deve ver uma chave correspondente ao número de telefone utilizado no teste (neste caso, "1234567890"), indicando que a reserva foi armazenada no cache do Redis. Se não houver chaves listadas, isso pode indicar que o valor não foi salvo corretamente ou que você está conectado ao banco de dados errado.
 
-### Não veio nada correspondente ao numero 1234567890, e agora ?
-# Se não apareceu nenhuma chave correspondente ao número "1234567890" após executar o comando `KEYS *`, isso pode indicar que o valor não foi salvo corretamente no Redis.
-# Verifique se o código do caso de uso `CheckInViaWhatsAppUseCase` está realmente chamando o método `set` do `cache_repository` para armazenar a reserva no cache do Redis. Além disso, certifique-se de que a conexão com o Redis Cloud está configurada corretamente e que não há erros de conexão ou autenticação.
-# Você também pode adicionar logs ou prints no código para verificar se o método `set` está sendo chamado e se os dados estão sendo passados corretamente para o Redis. Se o problema persistir, revise a configuração do Redis Cloud e as credenciais de acesso para garantir que tudo esteja configurado corretamente.
+def test_checkin_cancelled_reservation_returns_friendly_message():
+    """Reserva cancelada: retorna mensagem amigável (InvalidCheckInState)."""
+    reservation_repository = ReservationRepositoryMemory()
+    cache_repository = InMemoryCache()
+
+    reservation = Reservation(
+        reservation_id="1",
+        guest_name="Hospede",
+        guest_phone=PhoneNumber("5561999991111"),
+        status=ReservationStatus.CANCELLED,
+    )
+    reservation_repository.save(reservation)
+
+    checkin_use_case = CheckInViaWhatsAppUseCase(reservation_repository, cache_repository)
+    response = checkin_use_case.execute(CheckinRequestDTO(phone="5561999991111"))
+
+    assert response.success is False
+    assert "cancelada" in response.message.lower() or "check-in" in response.message.lower()
+    assert response.error is not None
+
+
+def test_checkin_before_allowed_date_returns_friendly_message():
+    """Check-in antes da data permitida: retorna mensagem amigável (InvalidCheckInDate)."""
+    reservation_repository = ReservationRepositoryMemory()
+    cache_repository = InMemoryCache()
+
+    start = date.today() + timedelta(days=7)
+    end = date.today() + timedelta(days=9)
+    reservation = Reservation(
+        reservation_id="1",
+        guest_name="Hospede",
+        guest_phone=PhoneNumber("5561999992222"),
+        status=ReservationStatus.CONFIRMED,
+        stay_period=StayPeriod(start, end),
+        room_number="101",
+    )
+    reservation_repository.save(reservation)
+
+    checkin_use_case = CheckInViaWhatsAppUseCase(reservation_repository, cache_repository)
+    response = checkin_use_case.execute(CheckinRequestDTO(phone="5561999992222"))
+
+    assert response.success is False
+    assert "check-in" in response.message.lower() or "permitido" in response.message.lower()
+    assert response.error is not None

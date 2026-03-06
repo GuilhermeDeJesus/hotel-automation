@@ -1,0 +1,88 @@
+"""Payment Repository SQL - implementação com banco de dados."""
+from datetime import datetime
+from typing import List, Optional
+import uuid
+
+from app.domain.entities.payment.payment import Payment
+from app.domain.repositories.payment_repository import PaymentRepository
+from .models import PaymentModel
+
+
+class PaymentRepositorySQL(PaymentRepository):
+    """Implementação SQL do repositório de pagamentos."""
+
+    def __init__(self, session):
+        self.session = session
+
+    @staticmethod
+    def _to_domain(model: PaymentModel) -> Payment:
+        return Payment(
+            payment_id=str(model.id),
+            reservation_id=str(model.reservation_id),
+            amount=float(model.amount),
+            status=model.status,
+            payment_method=model.payment_method,
+            transaction_id=model.transaction_id,
+            created_at=model.created_at,
+            approved_at=model.approved_at,
+            expires_at=model.expires_at,
+        )
+
+    def save(self, payment: Payment) -> None:
+        existing = self.session.get(PaymentModel, str(payment.id)) if payment.id else None
+        if existing:
+            existing.status = payment.status
+            existing.transaction_id = payment.transaction_id
+            existing.payment_method = payment.payment_method
+            existing.approved_at = payment.approved_at
+            existing.expires_at = payment.expires_at
+            existing.updated_at = datetime.now()
+        else:
+            new_row = PaymentModel(
+                id=str(payment.id) if payment.id else str(uuid.uuid4()),
+                reservation_id=str(payment.reservation_id),
+                amount=payment.amount,
+                status=payment.status,
+                payment_method=payment.payment_method,
+                transaction_id=payment.transaction_id,
+                approved_at=payment.approved_at,
+                expires_at=payment.expires_at,
+            )
+            self.session.add(new_row)
+            self.session.flush()
+            payment.id = str(new_row.id)
+        self.session.commit()
+
+    def find_by_id(self, payment_id: str) -> Optional[Payment]:
+        model = self.session.get(PaymentModel, str(payment_id))
+        if not model:
+            return None
+        return self._to_domain(model)
+
+    def find_by_transaction_id(self, transaction_id: str) -> Optional[Payment]:
+        model = (
+            self.session.query(PaymentModel)
+            .filter_by(transaction_id=str(transaction_id))
+            .first()
+        )
+        if not model:
+            return None
+        return self._to_domain(model)
+
+    def list_payments(
+        self,
+        reservation_id: Optional[str] = None,
+        status: Optional[str] = None,
+        limit: int = 100,
+    ) -> List[Payment]:
+        query = self.session.query(PaymentModel)
+        if reservation_id:
+            query = query.filter(PaymentModel.reservation_id == str(reservation_id))
+        if status:
+            query = query.filter(PaymentModel.status == status.upper())
+        models = (
+            query.order_by(PaymentModel.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+        return [self._to_domain(m) for m in models]

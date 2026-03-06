@@ -6,7 +6,7 @@ python-dotenv
 python-multipart
 
 # Database
-psycopg2
+psycopg2-binary
 sqlalchemy
 alembic
 redis
@@ -19,3 +19,4 @@ openai
 requests
 twilio
 pyngrok
+stripe

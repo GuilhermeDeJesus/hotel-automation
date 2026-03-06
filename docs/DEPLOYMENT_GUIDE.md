@@ -1,23 +1,25 @@
 # Guia de Deploy (Atual)
 
-Guia alinhado com o estado atual do repositório.
+Guia operacional alinhado com o estado atual do repositório (Mar/2026).
 
 ## Requisitos
 
-- Python 3.10+
-- PostgreSQL
-- Redis
+- Docker + Docker Compose
 - Credenciais OpenAI
 - Credenciais Meta e/ou Twilio
 
 ## Variáveis mínimas (`.env`)
 
 ```env
-DATABASE_URL=postgresql://postgres:senha@localhost:5432/hotel
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=hotel
+DATABASE_URL=postgresql://postgres:postgres@db:5432/hotel
 OPENAI_API_KEY=...
 
-REDIS_HOST=localhost
+REDIS_HOST=redis
 REDIS_PORT=6379
+REDIS_USERNAME=
 REDIS_PASSWORD=
 
 META_ACCESS_TOKEN=...
@@ -27,16 +29,30 @@ WEBHOOK_VERIFY_TOKEN=...
 TWILIO_ACCOUNT_SID=...
 TWILIO_AUTH_TOKEN=...
 TWILIO_WHATSAPP_NUMBER=whatsapp:+14155238886
+
+NGROK_AUTHTOKEN=...
 ```
 
 ## Passos
 
 ```bash
-pip install -r requirements.txt
-alembic upgrade head
-python scripts/seed_hotel.py
-python -m uvicorn app.main:app --reload --port 8000
+cp .env.example .env
+docker compose up -d --build app db redis
+docker compose exec -T app alembic upgrade head
+docker compose exec -T app python scripts/seed_hotel.py
+curl http://localhost:8000/health
 ```
+
+## WhatsApp em ambiente real de teste (Twilio + ngrok)
+
+```bash
+docker compose --profile tunnel up -d --build
+curl -s http://localhost:4040/api/tunnels
+```
+
+Configure no Twilio Sandbox (`When a message comes in`):
+
+`https://SEU_DOMINIO_NGROK/webhook/whatsapp/twilio`
 
 ## Endpoints de produção
 
@@ -49,4 +65,9 @@ python -m uvicorn app.main:app --reload --port 8000
 1. Validar webhook Meta.
 2. Validar webhook Twilio.
 3. Confirmar recebimento e resposta no WhatsApp.
-4. Confirmar geração de logs.
+4. Confirmar geração de logs (`docker compose logs -f app ngrok`).
+5. Validar acesso a Redis e PostgreSQL pelos containers.
+
+## Nota de depreciação
+
+Comandos de `uvicorn` + `ngrok http 8000` local continuam possíveis, mas o fluxo recomendado do projeto é Docker-first para evitar drift de ambiente.

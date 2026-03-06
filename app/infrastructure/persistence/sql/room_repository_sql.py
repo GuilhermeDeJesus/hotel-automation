@@ -68,7 +68,11 @@ class RoomRepositorySQL(RoomRepository):
         return available_list
 
     def is_available(
-        self, room_number: str, check_in: date, check_out: date
+        self,
+        room_number: str,
+        check_in: date,
+        check_out: date,
+        exclude_reservation_id: Optional[str] = None,
     ) -> bool:
         """Check if specific room is available for dates."""
         # Check if room exists
@@ -81,8 +85,8 @@ class RoomRepositorySQL(RoomRepository):
         if not room:
             return False
 
-        # Check for conflicting reservations
-        has_conflict = (
+        # Build conflict query
+        conflict_query = (
             self.session.query(ReservationModel)
             .filter(
                 ReservationModel.room_number == room_number,
@@ -92,8 +96,12 @@ class RoomRepositorySQL(RoomRepository):
                     ReservationModel.check_out_date > check_in,
                 ),
             )
-            .first()
-        ) is not None
+        )
+        if exclude_reservation_id:
+            conflict_query = conflict_query.filter(
+                ReservationModel.id != exclude_reservation_id
+            )
+        has_conflict = conflict_query.first() is not None
 
         return not has_conflict
 

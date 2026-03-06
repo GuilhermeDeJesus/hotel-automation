@@ -35,7 +35,19 @@ class RoomRepository(ABC):
 
     @abstractmethod
     def is_available(
-        self, room_number: str, check_in: date, check_out: date
+        self,
+        room_number: str,
+        check_in: date,
+        check_out: date,
+        exclude_reservation_id: Optional[str] = None,
     ) -> bool:
-        """Check if specific room is available for dates."""
+        """
+        Check if specific room is available for dates.
+
+        Args:
+            room_number: Room to check
+            check_in: Check-in date
+            check_out: Check-out date
+            exclude_reservation_id: If provided, ignore this reservation (e.g. when changing dates)
+        """
         pass

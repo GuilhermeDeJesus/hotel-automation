@@ -10,25 +10,28 @@ Para o plano completo de 0% a 100% com casos reais (check-in, confirmação, ext
 
 ## Infra e setup
 
-- [ ] PostgreSQL ativo
-- [ ] Redis ativo
-- [ ] `.env` completo com segredos válidos
-- [ ] `alembic upgrade head`
-- [ ] `python scripts/seed_hotel.py`
+- [x] PostgreSQL ativo (`docker compose`)
+- [x] Redis ativo (`docker compose`)
+- [ ] `.env` completo com segredos válidos e rotacionados
+- [x] Migrações (`alembic upgrade head`)
+- [x] Seed de hotel + quartos (`python scripts/seed_hotel.py`)
 
 ## Execução
 
-- [ ] `python -m uvicorn app.main:app --reload --port 8000`
+- [x] `docker compose up -d --build app db redis`
+- [x] Healthcheck ativo (`GET /health`)
 - [ ] Meta webhook validado (`GET/POST /webhook/whatsapp`)
 - [ ] Twilio webhook validado (`POST /webhook/whatsapp/twilio`)
 
 ## Qualidade
 
-- [ ] Rodar testes em `tests/unit`
-- [ ] Criar/fortalecer testes de integração de webhook
+- [x] Rodar testes em `tests/unit`
+- [x] Rodar integração com Redis real
+- [x] Rodar E2E de negócio com PostgreSQL + Redis reais
+- [ ] Criar/fortalecer testes de integração de webhook externo (Meta/Twilio sandbox)
 
 ## Evolução técnica
 
-1. Adicionar endpoint de healthcheck.
-2. Melhorar monitoramento e alertas.
-3. Revisar docker-compose para execução padronizada.
+1. Reforçar observabilidade (logs estruturados + alertas).
+2. Consolidar estratégia de criação transacional de reserva a partir de conversa.
+3. Expandir cobertura de testes de webhook com provedores externos.

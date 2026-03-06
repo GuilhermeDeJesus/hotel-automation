@@ -1,19 +1,74 @@
 import os
 import json
 import logging
+import time
 from fastapi import APIRouter, Request, Response, Depends
 from dotenv import load_dotenv
 
 from app.application.use_cases.handle_whatsapp_message import HandleWhatsAppMessageUseCase
+from app.application.use_cases.get_saas_dashboard import GetSaaSDashboardUseCase
 from app.application.dto.whatsapp_message_request_dto import WhatsAppMessageRequestDTO
 from app.interfaces.dependencies import get_whatsapp_message_use_case
 from app.infrastructure.messaging.whatsapp_meta_client import WhatsAppMetaClient
 from app.infrastructure.messaging.whatsapp_twilio_client import WhatsAppTwilioClient
+from app.infrastructure.cache.redis_repository import RedisRepository
+from app.infrastructure.persistence.sql.database import SessionLocal
+from app.infrastructure.persistence.sql.saas_repository_sql import SaaSRepositorySQL
 
 load_dotenv()
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _normalize_phone(phone: str) -> str:
+    if not phone:
+        return ""
+    return "".join(ch for ch in phone if ch.isdigit())
+
+
+def _track_saas(
+    phone: str,
+    source: str,
+    event_type: str,
+    success: bool = True,
+    response_time_ms: int | None = None,
+    details: dict | None = None,
+) -> None:
+    if not phone:
+        return
+
+    session = SessionLocal()
+    should_invalidate_cache = False
+    try:
+        repo = SaaSRepositorySQL(session)
+        if event_type == "inbound_message":
+            repo.touch_lead(phone=phone, source=source, stage="NEW")
+        elif event_type == "outbound_message":
+            repo.touch_lead(phone=phone, source=source, stage="ENGAGED")
+
+        repo.track_event(
+            phone=phone,
+            source=source,
+            event_type=event_type,
+            success=success,
+            response_time_ms=response_time_ms,
+            details=details,
+        )
+        repo.sync_lead_stage_from_reservation(phone)
+        should_invalidate_cache = True
+    except Exception as exc:
+        logger.warning(f"⚠️ Falha ao registrar evento SaaS: {exc}")
+    finally:
+        session.close()
+
+    if should_invalidate_cache:
+        try:
+            deleted = GetSaaSDashboardUseCase.invalidate_analytics_cache(RedisRepository())
+            if deleted:
+                logger.info(f"🧹 Cache SaaS invalidado ({deleted} chaves).")
+        except Exception as exc:
+            logger.warning(f"⚠️ Falha ao invalidar cache SaaS: {exc}")
 
 # Inicializa clientes WhatsApp
 try:
@@ -121,7 +176,8 @@ async def receive_twilio_whatsapp_message(
         form_data = await request.form()
         
         # Extrai dados da mensagem
-        from_phone = form_data.get("From", "").replace("whatsapp:", "")
+        from_phone_raw = form_data.get("From", "").replace("whatsapp:", "")
+        from_phone = _normalize_phone(from_phone_raw)
         message_body = form_data.get("Body", "")
         message_sid = form_data.get("MessageSid", "")
         num_media = int(form_data.get("NumMedia", 0))
@@ -132,23 +188,44 @@ async def receive_twilio_whatsapp_message(
         if num_media > 0:
             media_url = form_data.get("MediaUrl0", "")
             logger.info(f"📎 [TWILIO] Mídia: {media_url}")
+
+        _track_saas(
+            phone=from_phone,
+            source="twilio",
+            event_type="inbound_message",
+            details={"message_sid": message_sid},
+        )
         
         # Processa a mensagem e gera resposta
+        # Quando num_media > 0, Body pode vir vazio (ex: imagem sem legenda)
+        has_media = num_media > 0
+        started_at = time.perf_counter()
         response_dto = use_case.execute(
             WhatsAppMessageRequestDTO(
                 phone=from_phone,
                 message=message_body,
                 source="twilio",
+                has_media=has_media,
             )
         )
         
         # Envia resposta via Twilio
         result = whatsapp_twilio_client.send_text_message(from_phone, response_dto.reply)
+        elapsed_ms = int((time.perf_counter() - started_at) * 1000)
         
         if result["success"]:
             logger.info(f"✅ [TWILIO] Resposta enviada para {from_phone}")
         else:
             logger.error(f"❌ [TWILIO] Erro ao enviar: {result}")
+
+        _track_saas(
+            phone=from_phone,
+            source="twilio",
+            event_type="outbound_message",
+            success=bool(result.get("success")),
+            response_time_ms=elapsed_ms,
+            details={"message_sid": message_sid},
+        )
         
         # Twilio precisa de status 200 para confirmar
         return Response(status_code=200)
@@ -179,7 +256,7 @@ async def _handle_incoming_message(message: dict, use_case: HandleWhatsAppMessag
         return
     
     message_id = message.get("id")
-    from_phone = message.get("from")
+    from_phone = _normalize_phone(message.get("from"))
     timestamp = message.get("timestamp")
     msg_type = message.get("type")
     
@@ -190,26 +267,46 @@ async def _handle_incoming_message(message: dict, use_case: HandleWhatsAppMessag
     
     # Extrai conteúdo baseado no tipo
     content = _extract_message_content(message, msg_type)
-    
-    logger.info(f"📝 Conteúdo: '{content}'")
-    
+    has_media = msg_type in ("image", "document", "audio", "video")
+
+    logger.info(f"📝 Conteúdo: '{content}' | has_media: {has_media}")
+
     # Processa a mensagem
     try:
+        _track_saas(
+            phone=from_phone,
+            source="meta",
+            event_type="inbound_message",
+            details={"message_id": message_id, "type": msg_type},
+        )
+
+        started_at = time.perf_counter()
         response_dto = use_case.execute(
             WhatsAppMessageRequestDTO(
                 phone=from_phone,
                 message=content,
                 source="meta",
+                has_media=has_media,
             )
         )
         
         # Envia resposta via WhatsApp
         result = whatsapp_client.send_text_message(from_phone, response_dto.reply)
+        elapsed_ms = int((time.perf_counter() - started_at) * 1000)
         
         if result["success"]:
             logger.info(f"✅ Resposta enviada para {from_phone}")
         else:
             logger.error(f"❌ Erro ao enviar resposta: {result['error']}")
+
+        _track_saas(
+            phone=from_phone,
+            source="meta",
+            event_type="outbound_message",
+            success=bool(result.get("success")),
+            response_time_ms=elapsed_ms,
+            details={"message_id": message_id, "type": msg_type},
+        )
     
     except Exception as e:
         logger.error(f"❌ Erro ao processar mensagem: {str(e)}", exc_info=True)

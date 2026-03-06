@@ -41,6 +41,26 @@ class InvalidCancellationState(DomainException):
     pass
 
 
+class InvalidRoomChangeState(DomainException):
+    """Raised when room change is attempted in invalid reservation state."""
+    pass
+
+
+class InvalidDatesChangeState(DomainException):
+    """Raised when date change is attempted in invalid reservation state."""
+    pass
+
+
+class InvalidExtendStayState(DomainException):
+    """Raised when extend stay is attempted in invalid reservation state."""
+    pass
+
+
+class InvalidExtendStayDate(DomainException):
+    """Raised when new checkout date is not after current checkout."""
+    pass
+
+
 class ReservationNotFound(DomainException):
     """Raised when reservation lookup by ID fails."""
     pass

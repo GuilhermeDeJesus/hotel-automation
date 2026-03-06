@@ -2,6 +2,7 @@ __pycache__/
 app/__pycache__/
 tests/__pycache__/
 .vscode/
+.cursor/
 .pytest_cache/
 *.pyc
 .env

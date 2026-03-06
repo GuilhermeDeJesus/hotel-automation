@@ -86,6 +86,13 @@ class ConfirmReservationUseCase:
             status=reservation.status.name,
         )
 
+    def get_formatted_summary_for_phone(self, phone: str) -> str | None:
+        """Retorna resumo formatado ou None se não houver reserva."""
+        reservation = self.reservation_repository.find_by_phone_number(phone)
+        if not reservation:
+            return None
+        return self.get_formatted_summary(reservation)
+
     def get_formatted_summary(self, reservation) -> str:
         """Retorna resumo bem formatado com emojis e detalhes."""
         lines = [

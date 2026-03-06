@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 from app.domain.value_objects.phone_number import PhoneNumber
 from app.domain.entities.reservation.reservation_status import ReservationStatus
@@ -30,7 +30,13 @@ class Reservation:
         total_amount: Optional[float] = None,
         created_at: Optional[datetime] = None,
         checked_in_at: Optional[datetime] = None,
-        checked_out_at: Optional[datetime] = None
+        checked_out_at: Optional[datetime] = None,
+        guest_document: Optional[str] = None,
+        estimated_arrival_time: Optional[str] = None,
+        pre_checkin_completed_at: Optional[datetime] = None,
+        digital_key_code: Optional[str] = None,
+        consent_terms_accepted_at: Optional[datetime] = None,
+        consent_marketing: bool = False,
     ):
         self.id = reservation_id
         self.guest_name = guest_name
@@ -42,6 +48,12 @@ class Reservation:
         self.created_at = created_at or datetime.now()
         self.checked_in_at = checked_in_at
         self.checked_out_at = checked_out_at
+        self.guest_document = guest_document
+        self.estimated_arrival_time = estimated_arrival_time
+        self.pre_checkin_completed_at = pre_checkin_completed_at
+        self.digital_key_code = digital_key_code
+        self.consent_terms_accepted_at = consent_terms_accepted_at
+        self.consent_marketing = consent_marketing
     
     def check_in(self, room_number: Optional[str] = None) -> None:
         """
@@ -72,6 +84,10 @@ class Reservation:
         self.checked_in_at = datetime.now()
         if room_number:
             self.room_number = room_number
+        # 6.4 Gera chave digital para self-check-in
+        if not self.digital_key_code:
+            import secrets
+            self.digital_key_code = secrets.token_hex(4).upper()[:8]
     
     def check_out(self) -> None:
         """
@@ -123,6 +139,85 @@ class Reservation:
     def can_checkin(self) -> bool:
         """Verifica se pode fazer check-in."""
         return self.status in [ReservationStatus.CONFIRMED, ReservationStatus.PENDING]
+
+    def change_room(self, room_number: str) -> None:
+        """
+        Altera quarto da reserva. Só permitido antes do check-in.
+
+        Raises:
+            InvalidRoomChangeState: Se status não permite troca de quarto
+        """
+        if self.status not in (ReservationStatus.PENDING, ReservationStatus.CONFIRMED):
+            raise exceptions.InvalidRoomChangeState(
+                "Só é possível trocar quarto antes do check-in."
+            )
+        self.room_number = room_number
+
+    def change_dates(self, new_period: StayPeriod, daily_rate: float) -> None:
+        """
+        Altera datas da reserva. Só permitido antes do check-in.
+
+        Args:
+            new_period: Novo período de estadia (validado pelo StayPeriod)
+            daily_rate: Diária do quarto para recalcular total_amount
+
+        Raises:
+            InvalidDatesChangeState: Se status não permite alteração de datas
+        """
+        if self.status not in (ReservationStatus.PENDING, ReservationStatus.CONFIRMED):
+            raise exceptions.InvalidDatesChangeState(
+                "Só é possível alterar datas antes do check-in."
+            )
+        self.stay_period = new_period
+        num_nights = new_period.number_of_nights()
+        self.total_amount = daily_rate * num_nights
+
+    def extend_stay(self, new_checkout: date, daily_rate: float) -> None:
+        """
+        Estende a estadia para nova data de check-out. Só permitido durante hospedagem.
+
+        Args:
+            new_checkout: Nova data de saída (deve ser > stay_period.end)
+            daily_rate: Diária do quarto para recalcular total_amount
+
+        Raises:
+            InvalidExtendStayState: Se status não permite extensão
+            InvalidExtendStayDate: Se new_checkout não é após o check-out atual
+        """
+        if self.status not in (ReservationStatus.CONFIRMED, ReservationStatus.CHECKED_IN):
+            raise exceptions.InvalidExtendStayState(
+                "Só é possível estender estadia em reservas confirmadas ou com check-in realizado."
+            )
+        if not self.stay_period:
+            raise exceptions.InvalidExtendStayDate("Reserva sem período definido.")
+        if new_checkout <= self.stay_period.end:
+            raise exceptions.InvalidExtendStayDate(
+                f"A nova data de saída deve ser após {self.stay_period.end.strftime('%d/%m/%Y')}."
+            )
+        new_period = StayPeriod(
+            self.stay_period.start, new_checkout, allow_past=True
+        )
+        self.stay_period = new_period
+        num_nights = new_period.number_of_nights()
+        self.total_amount = daily_rate * num_nights
+
+    def complete_pre_checkin(
+        self,
+        guest_document: str,
+        estimated_arrival_time: Optional[str] = None,
+    ) -> None:
+        """6.1 Check-in antecipado - registra documentos e horário estimado."""
+        if self.status not in (ReservationStatus.PENDING, ReservationStatus.CONFIRMED):
+            raise exceptions.InvalidCheckInState(
+                "Pré-check-in só disponível para reservas pendentes ou confirmadas."
+            )
+        self.guest_document = guest_document
+        self.estimated_arrival_time = estimated_arrival_time
+        self.pre_checkin_completed_at = datetime.now()
+
+    def accept_terms(self) -> None:
+        """6.8 LGPD - aceita termos de uso."""
+        self.consent_terms_accepted_at = datetime.now()
 
     def to_dict(self) -> dict:
         """Serializa a reserva para dicionário."""

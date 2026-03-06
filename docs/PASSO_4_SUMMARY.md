@@ -10,9 +10,10 @@ Resumo operacional do recurso de contexto de hotel.
 ## Comandos úteis
 
 ```bash
-alembic upgrade head
-python scripts/seed_hotel.py
-python -m uvicorn app.main:app --reload --port 8000
+docker compose up -d --build app db redis
+docker compose exec -T app alembic upgrade head
+docker compose exec -T app python scripts/seed_hotel.py
+curl http://localhost:8000/health
 ```
 
 ## Critério de aceite
