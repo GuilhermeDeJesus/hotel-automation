@@ -158,7 +158,68 @@ export async function fetchAuditEvents(params?: {
   });
 }
 
+export async function fetchRooms() {
+  return fetchApi<{ items: import("../types/api").Room[] }>("/saas/rooms");
+}
+
+export async function createRoom(payload: {
+  number: string;
+  room_type: string;
+  daily_rate: number;
+  max_guests: number;
+}) {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
+  const res = await fetch(`${baseUrl}/saas/rooms`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `API error: ${res.status} ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function updateRoom(
+  roomNumber: string,
+  payload: { room_type?: string; daily_rate?: number; max_guests?: number; status?: string }
+) {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
+  const res = await fetch(`${baseUrl}/saas/rooms/${encodeURIComponent(roomNumber)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `API error: ${res.status} ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function deleteRoom(roomNumber: string) {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
+  const res = await fetch(`${baseUrl}/saas/rooms/${encodeURIComponent(roomNumber)}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `API error: ${res.status} ${res.statusText}`);
+  }
+  return res.json();
+}
+
 export async function updateHotelConfig(payload: {
+  name?: string;
+  address?: string;
+  contact_phone?: string;
+  checkin_time?: string;
+  checkout_time?: string;
+  cancellation_policy?: string;
+  pet_policy?: string;
+  child_policy?: string;
+  amenities?: string;
   requires_payment_for_confirmation?: boolean;
   allows_reservation_without_payment?: boolean;
 }) {

@@ -8,9 +8,10 @@ class SupportTicketRepositorySQL(SupportTicketRepository):
     def __init__(self, session):
         self.session = session
 
-    def save(self, ticket_id: str, reservation_id: str, description: str, category: str) -> None:
+    def save(self, hotel_id: str, ticket_id: str, reservation_id: str, description: str, category: str) -> None:
         ticket = SupportTicketModel(
             id=ticket_id,
+            hotel_id=hotel_id,
             reservation_id=reservation_id,
             description=description,
             category=category,
@@ -25,9 +26,10 @@ class RoomOrderRepositorySQL(RoomOrderRepository):
     def __init__(self, session):
         self.session = session
 
-    def save(self, order_id: str, reservation_id: str, items_json: str, total: float) -> None:
+    def save(self, hotel_id: str, order_id: str, reservation_id: str, items_json: str, total: float) -> None:
         order = RoomOrderModel(
             id=order_id,
+            hotel_id=hotel_id,
             reservation_id=reservation_id,
             items_json=items_json,
             total_amount=total,

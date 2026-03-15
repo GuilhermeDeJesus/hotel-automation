@@ -30,6 +30,15 @@ class RoomRepositoryStub:
     def is_available(self, room_number: str, check_in, check_out) -> bool:
         return self.get_by_number(room_number) is not None
 
+    def list_all(self):
+        return self._rooms
+
+    def save(self, room):
+        return room
+
+    def deactivate(self, room_number: str):
+        return True
+
 
 def test_create_reservation_success():
     """Cria reserva PENDING e persiste."""

@@ -26,6 +26,15 @@ class MockRoomRepository:
     def is_available(self, *args, **kwargs):
         return True
 
+    def list_all(self):
+        return self.find_available()
+
+    def save(self, room):
+        return room
+
+    def deactivate(self, room_number: str):
+        return True
+
 
 class MockHotelRepositoryAllowsWithout:
     """Hotel que permite reserva sem pagamento (default)."""

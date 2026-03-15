@@ -72,6 +72,21 @@ class DummyRoomRepository:
     def find_available(self, *args, **kwargs):
         return []
 
+    def list_all(self):
+        return []
+
+    def get_by_number(self, room_number: str):
+        return None
+
+    def is_available(self, *args, **kwargs):
+        return False
+
+    def save(self, room):
+        return room
+
+    def deactivate(self, room_number: str):
+        return False
+
 
 class DummyHotelRepository:
     """Retorna None = defaults (oferece ambas opções de pagamento)."""

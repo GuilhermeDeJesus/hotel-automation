@@ -28,8 +28,13 @@ class PaymentRepositorySQL(PaymentRepository):
             expires_at=model.expires_at,
         )
 
-    def save(self, payment: Payment) -> None:
-        existing = self.session.get(PaymentModel, str(payment.id)) if payment.id else None
+    def save(self, hotel_id: str, payment: Payment) -> None:
+        existing = (
+            self.session.query(PaymentModel)
+            .filter_by(id=str(payment.id), hotel_id=hotel_id)
+            .first()
+            if payment.id else None
+        )
         if existing:
             existing.status = payment.status
             existing.transaction_id = payment.transaction_id
@@ -47,22 +52,27 @@ class PaymentRepositorySQL(PaymentRepository):
                 transaction_id=payment.transaction_id,
                 approved_at=payment.approved_at,
                 expires_at=payment.expires_at,
+                hotel_id=hotel_id,
             )
             self.session.add(new_row)
             self.session.flush()
             payment.id = str(new_row.id)
         self.session.commit()
 
-    def find_by_id(self, payment_id: str) -> Optional[Payment]:
-        model = self.session.get(PaymentModel, str(payment_id))
+    def find_by_id(self, hotel_id: str, payment_id: str) -> Optional[Payment]:
+        model = (
+            self.session.query(PaymentModel)
+            .filter_by(id=str(payment_id), hotel_id=hotel_id)
+            .first()
+        )
         if not model:
             return None
         return self._to_domain(model)
 
-    def find_by_transaction_id(self, transaction_id: str) -> Optional[Payment]:
+    def find_by_transaction_id(self, hotel_id: str, transaction_id: str) -> Optional[Payment]:
         model = (
             self.session.query(PaymentModel)
-            .filter_by(transaction_id=str(transaction_id))
+            .filter_by(transaction_id=str(transaction_id), hotel_id=hotel_id)
             .first()
         )
         if not model:
@@ -71,11 +81,12 @@ class PaymentRepositorySQL(PaymentRepository):
 
     def list_payments(
         self,
+        hotel_id: str,
         reservation_id: Optional[str] = None,
         status: Optional[str] = None,
         limit: int = 100,
     ) -> List[Payment]:
-        query = self.session.query(PaymentModel)
+        query = self.session.query(PaymentModel).filter_by(hotel_id=hotel_id)
         if reservation_id:
             query = query.filter(PaymentModel.reservation_id == str(reservation_id))
         if status:

@@ -20,9 +20,10 @@ class Reservation:
     """
     
     def __init__(
-        self, 
-        reservation_id: str, 
-        guest_name: str, 
+        self,
+        reservation_id: str,
+        guest_name: str,
+        hotel_id: str,
         guest_phone: PhoneNumber,
         status: ReservationStatus,
         stay_period: Optional[StayPeriod] = None,
@@ -40,6 +41,7 @@ class Reservation:
     ):
         self.id = reservation_id
         self.guest_name = guest_name
+        self.hotel_id = hotel_id
         self.guest_phone = guest_phone
         self.status = status
         self.stay_period = stay_period
@@ -224,6 +226,7 @@ class Reservation:
         return {
             "id": self.id,
             "guest_name": self.guest_name,
+            "hotel_id": self.hotel_id,
             "guest_phone": str(self.guest_phone),
             "status": self.status.name,
             "room_number": self.room_number,

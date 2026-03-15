@@ -20,19 +20,22 @@ from tests.unit.mocks.ai_service_mock import AIServiceMock
 class SimpleCache:
     def __init__(self):
         self.store = {}
-    
-    def get(self, key):
-        return self.store.get(key)
-    
-    def set(self, key, value, ttl_seconds: int = 3600):
-        self.store[key] = value
-    
-    def delete(self, key):
-        self.store.pop(key, None)
-    
-    def exists(self, key):
-        return key in self.store
-    
+
+    def _key(self, hotel_id, phone):
+        return f"{hotel_id}:{phone}"
+
+    def get(self, hotel_id, phone):
+        return self.store.get(self._key(hotel_id, phone))
+
+    def set(self, hotel_id, phone, value, ttl_seconds: int = 3600):
+        self.store[self._key(hotel_id, phone)] = value
+
+    def delete(self, hotel_id, phone):
+        self.store.pop(self._key(hotel_id, phone), None)
+
+    def exists(self, hotel_id, phone):
+        return self._key(hotel_id, phone) in self.store
+
     def clear(self):
         self.store.clear()
 
@@ -59,33 +62,34 @@ def main():
         repo = ReservationRepositoryMemory()
         cache = SimpleCache()
         messenger = SimpleMessenger()
-        
+
         use_case = ConversationUseCase(
             ai_service=mock_ai,
             reservation_repo=repo,
             cache_repository=cache,
             messaging=messenger,
         )
-        
+
+        hotel_id = "hotel-1"
         phone = "mock-user"
-        
+
         # Test 1
         print("📝 Enviando mensagem 1: 'Olá, como você está?'")
-        response1 = use_case.execute(phone, "Olá, como você está?")
+        response1 = use_case.execute(hotel_id, phone, "Olá, como você está?")
         print(f"✓ Resposta: {response1}\n")
-        
+
         # Test 2 (with history)
         print("📝 Enviando mensagem 2: 'Qual é o seu nome?'")
-        response2 = use_case.execute(phone, "Qual é o seu nome?")
+        response2 = use_case.execute(hotel_id, phone, "Qual é o seu nome?")
         print(f"✓ Resposta: {response2}\n")
-        
+
         # Test 3 (with more history)
         print("📝 Enviando mensagem 3: 'Me ajude com um check-in'")
-        response3 = use_case.execute(phone, "Me ajude com um check-in")
+        response3 = use_case.execute(hotel_id, phone, "Me ajude com um check-in")
         print(f"✓ Resposta: {response3}\n")
-        
+
         # Show full history
-        history = cache.get(phone) or []
+        history = cache.get(hotel_id, phone) or []
         print("=" * 70)
         print(f"📊 Histórico Completo ({len(history)} mensagens)")
         print("=" * 70)
@@ -93,7 +97,7 @@ def main():
             role = "👤 User" if msg.get("role") == "user" else "🤖 AI"
             content = msg.get("content", "")[:60]
             print(f"{i}. {role}: {content}")
-        
+
         print("\n✅ Teste concluído com sucesso!")
         print(f"✅ Total de iterações com IA: {len([m for m in history if m.get('role') == 'assistant'])}")
         

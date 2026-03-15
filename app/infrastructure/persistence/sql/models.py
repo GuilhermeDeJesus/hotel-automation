@@ -4,11 +4,26 @@ from datetime import datetime
 from .database import Base
 
 
+class UserModel(Base):
+    """Tabela de Usuários para autenticação e RBAC"""
+    __tablename__ = "users"
+
+    id = Column(String, primary_key=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(String(32), nullable=False, default="user")  # admin, manager, staff, user
+    hotel_id = Column(String, ForeignKey("hotels.id"), nullable=True, index=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
 class RoomModel(Base):
     """Tabela de Quartos do Hotel"""
     __tablename__ = "rooms"
 
     id = Column(String, primary_key=True)
+    hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
     number = Column(String(10), nullable=False, unique=True, index=True)
     room_type = Column(String(50), nullable=False)  # SINGLE, DOUBLE, SUITE
     daily_rate = Column(Float, nullable=False)
@@ -24,6 +39,7 @@ class CustomerModel(Base):
     __tablename__ = "customers"
 
     id = Column(String, primary_key=True)
+    hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
     name = Column(String(255), nullable=False, index=True)
     phone = Column(String(20), index=True)
     email = Column(String(255), index=True)
@@ -41,6 +57,7 @@ class ReservationModel(Base):
     __tablename__ = "reservations"
 
     id = Column(String, primary_key=True)
+    hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
     
     # Dados do hóspede
     guest_name = Column(String(255), nullable=False)
@@ -87,6 +104,7 @@ class PaymentModel(Base):
     __tablename__ = "payments"
 
     id = Column(String, primary_key=True)
+    hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
     reservation_id = Column(String, ForeignKey("reservations.id"), nullable=False, index=True)
     
     # Dados do pagamento
@@ -131,6 +149,7 @@ class ConversationCacheModel(Base):
     __tablename__ = "conversation_cache"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
     phone_number = Column(String(20), nullable=False, unique=True, index=True)
     context_data = Column(Text)  # JSON string
     last_message = Column(Text)
@@ -143,6 +162,7 @@ class LeadModel(Base):
     __tablename__ = "saas_leads"
 
     id = Column(String, primary_key=True)
+    hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
     phone_number = Column(String(20), nullable=False, unique=True, index=True)
     source = Column(String(20), nullable=False, index=True, default="unknown")
     stage = Column(String(40), nullable=False, index=True, default="NEW")
@@ -158,6 +178,7 @@ class AnalyticsEventModel(Base):
     __tablename__ = "saas_analytics_events"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
     phone_number = Column(String(20), nullable=False, index=True)
     source = Column(String(20), nullable=False, index=True, default="unknown")
     event_type = Column(String(50), nullable=False, index=True)
@@ -186,6 +207,7 @@ class SupportTicketModel(Base):
     __tablename__ = "support_tickets"
 
     id = Column(String, primary_key=True)
+    hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
     reservation_id = Column(String, ForeignKey("reservations.id"), nullable=False, index=True)
     description = Column(Text, nullable=False)
     category = Column(String(50), nullable=False)
@@ -199,6 +221,7 @@ class RoomOrderModel(Base):
     __tablename__ = "room_orders"
 
     id = Column(String, primary_key=True)
+    hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
     reservation_id = Column(String, ForeignKey("reservations.id"), nullable=False, index=True)
     items_json = Column(Text, nullable=False)
     total_amount = Column(Float, nullable=False)
@@ -211,6 +234,7 @@ class ProactiveMessageLogModel(Base):
     __tablename__ = "proactive_message_log"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
     reservation_id = Column(String, nullable=False, index=True)
     message_type = Column(String(50), nullable=False)
     sent_at = Column(DateTime, default=datetime.now, nullable=False)

@@ -57,7 +57,7 @@ class ConversationUseCase:
         self.messaging = messaging
         self.logger = logger
 
-    def execute(self, phone: str, text: str) -> str:
+    def execute(self, hotel_id: str, phone: str, text: str) -> str:
         """
         Execute a single conversation turn.
 
@@ -78,43 +78,43 @@ class ConversationUseCase:
         """
         try:
             # Get conversation history from cache
-            history_dicts = self._get_conversation_history(phone)
-            
+            history_dicts = self._get_conversation_history(hotel_id, phone)
+
             # Convert dicts to Message value objects
             messages: List[Message] = [
                 Message(role=msg["role"], content=msg["content"])
                 for msg in history_dicts
             ]
-            
+
             # Create and add user message
             user_message = Message(role="user", content=text)
             messages.append(user_message)
-            
+
             # Call AI with conversation history and reservation context
             ai_response = self._call_ai(messages, phone)
-            
+
             # Create and add assistant message
             assistant_message = Message(role="assistant", content=ai_response)
             messages.append(assistant_message)
-            
+
             # Update cache with full conversation
-            self._update_conversation_history(phone, messages)
-            
+            self._update_conversation_history(hotel_id, phone, messages)
+
             # Log interaction to persistent storage
             self._log_interaction(phone, text, ai_response)
-            
+
             # Send response if messaging provider available
             if self.messaging:
                 self._send_message(phone, ai_response)
-            
+
             return ai_response
-            
+
         except (CacheError, AIServiceError) as e:
             raise ConversationFailed(f"Conversation failed: {str(e)}")
         except Exception as e:
             raise ConversationFailed(f"Unexpected error in conversation: {str(e)}")
 
-    def _get_conversation_history(self, phone: str) -> list:
+    def _get_conversation_history(self, hotel_id: str, phone: str) -> list:
         """
         Retrieve conversation history from cache.
         
@@ -125,7 +125,7 @@ class ConversationUseCase:
             List of message dicts with 'role' and 'content'
         """
         try:
-            history = self.cache_repository.get(phone)
+            history = self.cache_repository.get(hotel_id, phone)
             return history if history else []
         except Exception as e:
             raise CacheError(f"Failed to retrieve conversation history: {str(e)}")
@@ -175,7 +175,7 @@ class ConversationUseCase:
         except Exception as e:
             raise AIServiceError(f"AI service call failed: {str(e)}")
 
-    def _update_conversation_history(self, phone: str, messages: List[Message]) -> None:
+    def _update_conversation_history(self, hotel_id: str, phone: str, messages: List[Message]) -> None:
         """
         Update conversation history in cache.
         
@@ -186,7 +186,7 @@ class ConversationUseCase:
         try:
             # Convert Messages to dicts for storage
             message_dicts = [msg.to_dict() for msg in messages]
-            self.cache_repository.set(phone, message_dicts, ttl_seconds=3600)
+            self.cache_repository.set(hotel_id, phone, message_dicts, ttl_seconds=3600)
         except Exception as e:
             raise CacheError(f"Failed to update conversation history: {str(e)}")
 

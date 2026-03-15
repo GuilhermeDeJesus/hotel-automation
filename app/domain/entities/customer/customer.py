@@ -17,9 +17,10 @@ class Customer:
     """
     
     def __init__(
-        self, 
-        customer_id: str, 
+        self,
+        customer_id: str,
         name: str,
+        hotel_id: str,
         phone: Optional[PhoneNumber] = None,
         email: Optional[str] = None,
         document: Optional[str] = None,
@@ -28,6 +29,7 @@ class Customer:
     ):
         self.id = customer_id
         self.name = name
+        self.hotel_id = hotel_id
         self.phone = phone
         self.email = email
         self.document = document
@@ -61,6 +63,7 @@ class Customer:
         return {
             "id": self.id,
             "name": self.name,
+            "hotel_id": self.hotel_id,
             "phone": str(self.phone) if self.phone else None,
             "email": self.email,
             "document": self.document,

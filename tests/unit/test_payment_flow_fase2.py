@@ -41,6 +41,15 @@ class MockRoomRepository:
     def get_by_number(self, number):
         return type("Room", (), {"number": number, "room_type": "SINGLE", "daily_rate": 150.0})()
 
+    def list_all(self):
+        return self.find_available(None, None)
+
+    def save(self, room):
+        return room
+
+    def deactivate(self, room_number: str):
+        return True
+
 
 class MockHotelRepository:
     def get_active_hotel(self):

@@ -72,3 +72,7 @@ whatsapp-test: up-tunnel ngrok-url
 	@echo "https://SEU_NGROK_URL/webhook/whatsapp/twilio"
 	@echo ""
 	@echo "Use 'make logs' para acompanhar app/ngrok em tempo real."
+
+flow-debug:
+	@echo "Iniciando flow debug terminal (Redis + Postgres)..."
+	docker compose exec app python scripts/flow_debug_terminal.py

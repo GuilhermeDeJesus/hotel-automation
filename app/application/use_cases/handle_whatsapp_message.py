@@ -563,12 +563,37 @@ class HandleWhatsAppMessageUseCase:
         """
         Recebe comprovante de pagamento (texto ou mídia).
         Cria Payment PENDING manual para o hotel confirmar no painel.
+        Perguntas laterais (políticas, horários, etc.) são respondidas pela IA
+        sem sair do fluxo.
         """
         if not (text.strip() or has_media):
             return WhatsAppMessageResponseDTO(
                 reply="Por favor, envie o comprovante de pagamento (texto ou imagem).",
                 success=True,
             )
+
+        # Perguntas laterais: responde via IA e mantém o fluxo
+        content_lower = text.lower()
+        if self._is_lateral_question(content_lower, has_media):
+            try:
+                ai_reply = self.conversation_use_case.execute(phone, text)
+                reminder = (
+                    "\n\n---\n"
+                    "💳 Quando estiver pronto, envie o comprovante de pagamento para confirmarmos sua reserva."
+                )
+                return WhatsAppMessageResponseDTO(
+                    reply=f"{ai_reply}{reminder}",
+                    success=True,
+                )
+            except Exception as exc:
+                return WhatsAppMessageResponseDTO(
+                    reply=(
+                        "Desculpe, não consegui processar sua pergunta no momento. "
+                        "Por favor, envie o comprovante de pagamento para confirmarmos sua reserva."
+                    ),
+                    success=False,
+                    error=str(exc),
+                )
 
         reservation_id = flow_state.get("reservation_id", "")
         if not reservation_id:
@@ -821,6 +846,37 @@ class HandleWhatsAppMessageUseCase:
                 "sem pagamento imediato",
             ]
         )
+
+    @staticmethod
+    def _is_lateral_question(content_lower: str, has_media: bool) -> bool:
+        """
+        Detecta se a mensagem é uma pergunta lateral (ex: políticas, horários)
+        e não um comprovante de pagamento.
+        Imagens/documentos são sempre tratados como comprovante.
+        """
+        if has_media:
+            return False
+        stripped = content_lower.strip()
+        if not stripped or len(stripped) < 3:
+            return False
+        # Padrões de pergunta: palavras interrogativas e tópicos comuns
+        question_patterns = [
+            "qual ", "quais ", "como ", "quando ", "onde ", "por que ", "porque ",
+            "posso ", "pode ", "podem ", "horário", "horarios", "política", "políticas",
+            "cancelamento", "cancelar", "café", "cafe da manhã", "check-in", "check-out",
+            "serviço", "serviços", "wifi", "estacionamento", "pets", "pet ",
+            "aceita ", "tem ", "há ", "existe ", "existem ",
+            "me inform", "me diz", "me conta", "gostaria de sab", "queria sab",
+        ]
+        if any(p in content_lower for p in question_patterns):
+            return True
+        if stripped.endswith("?"):
+            return True
+        # Textos longos (>40 chars) sem padrão de comprovante tendem a ser perguntas
+        proof_patterns = ["pix", "transferência", "transferencia", "paguei", "pago", "comprovante"]
+        if len(stripped) > 40 and not any(p in content_lower for p in proof_patterns):
+            return True
+        return False
 
     @staticmethod
     def _is_create_reservation_intent(content_lower: str) -> bool:

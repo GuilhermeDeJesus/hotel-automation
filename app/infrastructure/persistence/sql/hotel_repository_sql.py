@@ -12,7 +12,7 @@ class HotelRepositorySQL(HotelRepository):
 
     def get_active_hotel(self) -> Optional[Hotel]:
         model: HotelModel | None = (
-            self.session.query(HotelModel).filter_by(is_active=True).first()
+            self.session.query(HotelModel).filter_by(is_active=True, id=hotel_id).first()
         )
         if not model:
             return None
@@ -43,7 +43,7 @@ class HotelRepositorySQL(HotelRepository):
     def save(self, hotel: Hotel) -> None:
         existing: HotelModel | None = None
         if hotel.id:
-            existing = self.session.query(HotelModel).get(hotel.id)
+            existing = self.session.query(HotelModel).filter_by(id=hotel.id, hotel_id=hotel_id).first()
 
         if existing:
             existing.name = hotel.name
@@ -67,6 +67,7 @@ class HotelRepositorySQL(HotelRepository):
         else:
             new_row = HotelModel(
                 id=hotel.id,
+                hotel_id=hotel_id,
                 name=hotel.name,
                 address=hotel.address,
                 contact_phone=hotel.contact_phone,

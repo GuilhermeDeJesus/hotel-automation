@@ -36,6 +36,15 @@ class MockRoomRepository:
     ) -> bool:
         return self.room_available
 
+    def list_all(self):
+        return [self.get_by_number("101")]
+
+    def save(self, room):
+        return room
+
+    def deactivate(self, room_number: str):
+        return True
+
 
 def test_prepare_extension_returns_can_extend_when_checked_in():
     """prepare_extension retorna can_extend=True quando reserva está CHECKED_IN."""

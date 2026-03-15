@@ -15,9 +15,10 @@ class DummyHotelContextService:
 
 
 def test_conversation_persists_in_real_redis():
+    hotel_id = "hotel-123"
     phone = "559999100001"
     cache = RedisRepository()
-    cache.delete(phone)
+    cache.delete(f"conversation:{hotel_id}:{phone}")
 
     use_case = ConversationUseCase(
         ai_service=AIServiceMock({"olá": "Olá! Como posso ajudar?"}),
@@ -29,11 +30,11 @@ def test_conversation_persists_in_real_redis():
         logger=None,
     )
 
-    answer = use_case.execute(phone, "olá")
+    answer = use_case.execute(hotel_id, phone, "olá")
 
     assert answer == "Olá! Como posso ajudar?"
 
-    history = cache.get(phone)
+    history = cache.get(hotel_id, phone)
     assert history is not None
     assert len(history) == 2
     assert history[0]["role"] == "user"

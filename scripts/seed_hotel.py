@@ -10,6 +10,8 @@ def seed_hotel() -> None:
     session = SessionLocal()
 
     existing = session.query(HotelModel).filter_by(is_active=True).first()
+    hotel_id = None
+    
     if not existing:
         hotel = HotelModel(
             id=str(uuid.uuid4()),
@@ -25,6 +27,10 @@ def seed_hotel() -> None:
             is_active=True,
         )
         session.add(hotel)
+        session.flush()  # Para obter o ID
+        hotel_id = hotel.id
+    else:
+        hotel_id = existing.id
 
     room_seeds = [
         {"number": "101", "room_type": "SINGLE", "daily_rate": 220.0, "max_guests": 1},
@@ -33,12 +39,16 @@ def seed_hotel() -> None:
     ]
 
     for room_data in room_seeds:
-        room_exists = session.query(RoomModel).filter_by(number=room_data["number"]).first()
+        room_exists = session.query(RoomModel).filter_by(
+            hotel_id=hotel_id, 
+            number=room_data["number"]
+        ).first()
         if room_exists:
             continue
 
         room = RoomModel(
             id=str(uuid.uuid4()),
+            hotel_id=hotel_id,  # Adicionar hotel_id
             number=room_data["number"],
             room_type=room_data["room_type"],
             daily_rate=room_data["daily_rate"],

@@ -4,6 +4,7 @@ uvicorn
 pydantic
 python-dotenv
 python-multipart
+passlib
 
 # Database
 psycopg2-binary

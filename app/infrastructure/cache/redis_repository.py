@@ -1,3 +1,4 @@
+from app.domain.repositories.conversation_cache_repository import ConversationCacheRepository
 """
 Redis implementation of CacheRepository.
 
@@ -13,7 +14,7 @@ from app.domain.repositories.cache_repository import CacheRepository
 from app.application.exceptions import CacheError
 
 
-class RedisRepository(CacheRepository):
+class RedisRepository(CacheRepository, ConversationCacheRepository):
     """
     Redis-based cache repository implementation.
     
@@ -23,6 +24,28 @@ class RedisRepository(CacheRepository):
     - REDIS_USERNAME
     - REDIS_PASSWORD
     """
+    
+    def _conversation_key(self, hotel_id: str, phone: str) -> str:
+        """Generate a unique cache key for a hotel's conversation with a phone."""
+        return f"conversation:{hotel_id}:{phone}"
+    
+    # Multi-tenant conversation cache methods
+    def get(self, hotel_id: str, phone: str) -> Optional[Any]:
+        key = self._conversation_key(hotel_id, phone)
+        try:
+            data = self.client.get(key)
+            if data:
+                return json.loads(data)
+            return None
+        except Exception as e:
+            raise CacheError(f"Failed to get conversation for hotel_id={hotel_id}, phone={phone}: {str(e)}")
+
+    def set(self, hotel_id: str, phone: str, value: Any, ttl_seconds: int = 3600) -> None:
+        key = self._conversation_key(hotel_id, phone)
+        try:
+            self.client.set(key, json.dumps(value), ex=ttl_seconds)
+        except Exception as e:
+            raise CacheError(f"Failed to set conversation for hotel_id={hotel_id}, phone={phone}: {str(e)}")
     
     def __init__(
         self,

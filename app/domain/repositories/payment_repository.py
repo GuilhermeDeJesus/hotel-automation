@@ -11,26 +11,27 @@ class PaymentRepository(ABC):
     """Interface para repositório de pagamentos."""
 
     @abstractmethod
-    def save(self, payment: Payment) -> None:
-        """Persiste ou atualiza um pagamento."""
+    def save(self, hotel_id: str, payment: Payment) -> None:
+        """Persiste ou atualiza um pagamento para um hotel."""
         pass
 
     @abstractmethod
-    def find_by_id(self, payment_id: str) -> Optional[Payment]:
-        """Retorna pagamento por ID ou None."""
+    def find_by_id(self, hotel_id: str, payment_id: str) -> Optional[Payment]:
+        """Retorna pagamento por ID e hotel ou None."""
         pass
 
     @abstractmethod
-    def find_by_transaction_id(self, transaction_id: str) -> Optional[Payment]:
-        """Retorna pagamento por transaction_id (ex: Stripe session_id)."""
+    def find_by_transaction_id(self, hotel_id: str, transaction_id: str) -> Optional[Payment]:
+        """Retorna pagamento por transaction_id e hotel (ex: Stripe session_id)."""
         pass
 
     @abstractmethod
     def list_payments(
         self,
+        hotel_id: str,
         reservation_id: Optional[str] = None,
         status: Optional[str] = None,
         limit: int = 100,
     ) -> List[Payment]:
-        """Lista pagamentos com filtros opcionais."""
+        """Lista pagamentos de um hotel com filtros opcionais."""
         pass

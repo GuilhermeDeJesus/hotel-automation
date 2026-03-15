@@ -274,7 +274,7 @@ class SaaSRepositorySQL:
         self.session.add(row)
         self.session.commit()
 
-    def touch_lead(self, phone: str, source: str, stage: str = "NEW") -> LeadModel | None:
+    def touch_lead(self, hotel_id: str, phone: str, source: str, stage: str = "NEW") -> LeadModel | None:
         normalized_phone = self._normalize_phone(phone)
         if not normalized_phone:
             return None
@@ -282,13 +282,14 @@ class SaaSRepositorySQL:
         now = datetime.now()
         lead: LeadModel | None = (
             self.session.query(LeadModel)
-            .filter_by(phone_number=normalized_phone)
+            .filter_by(phone_number=normalized_phone, hotel_id=hotel_id)
             .first()
         )
 
         if lead is None:
             lead = LeadModel(
                 id=str(uuid.uuid4()),
+                hotel_id=hotel_id,
                 phone_number=normalized_phone,
                 source=(source or "unknown").lower(),
                 stage=stage,

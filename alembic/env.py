@@ -5,7 +5,7 @@ from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -14,13 +14,12 @@ if str(PROJECT_ROOT) not in sys.path:
 from app.infrastructure.persistence.sql.database import Base
 import app.infrastructure.persistence.sql.models  # noqa: F401
 
-
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-load_dotenv()
+# load_dotenv()
 
 database_url = os.getenv("DATABASE_URL")
 if database_url:
@@ -63,4 +62,10 @@ def run_migrations_online() -> None:
 if context.is_offline_mode():
     run_migrations_offline()
 else:
-    run_migrations_online()
+    # Skip migration on startup to avoid head conflicts
+    # Run migrations manually with: alembic upgrade heads
+    try:
+        run_migrations_online()
+    except Exception as e:
+        print(f"Migration skipped: {e}")
+        print("Please run migrations manually with: alembic upgrade heads")

@@ -1,10 +1,10 @@
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
 # load environment variables from .env file if present
-load_dotenv()
+# load_dotenv()
 
 # allow configuring database URL via environment variable for flexibility
 # tests may set TEST_DATABASE_URL to override the regular one

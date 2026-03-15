@@ -99,8 +99,25 @@ export interface PaymentsFilters {
 export interface HotelConfig {
   id: string;
   name: string;
+  address: string;
+  contact_phone: string;
+  checkin_time: string;
+  checkout_time: string;
+  cancellation_policy: string;
+  pet_policy: string;
+  child_policy: string;
+  amenities: string;
   requires_payment_for_confirmation: boolean;
   allows_reservation_without_payment: boolean;
+}
+
+export interface Room {
+  id: string;
+  number: string;
+  room_type: string;
+  daily_rate: number;
+  max_guests: number;
+  status: string;
 }
 
 export interface AuditEvent {

@@ -17,9 +17,10 @@ class Payment:
     """
     
     def __init__(
-        self, 
-        payment_id: str, 
+        self,
+        payment_id: str,
         reservation_id: str,
+        hotel_id: str,
         amount: float,
         status: str = "PENDING",
         payment_method: Optional[str] = None,
@@ -30,6 +31,7 @@ class Payment:
     ):
         self.id = payment_id
         self.reservation_id = reservation_id
+        self.hotel_id = hotel_id
         self.amount = amount
         self.status = status
         self.payment_method = payment_method
@@ -98,6 +100,7 @@ class Payment:
         return {
             "id": self.id,
             "reservation_id": self.reservation_id,
+            "hotel_id": self.hotel_id,
             "amount": self.amount,
             "status": self.status,
             "payment_method": self.payment_method,

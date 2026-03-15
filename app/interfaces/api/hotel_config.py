@@ -1,4 +1,4 @@
-"""Hotel config API - get and update payment configuration."""
+"""Hotel config API - get and update hotel configuration."""
 from collections.abc import Generator
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,6 +15,15 @@ router = APIRouter(prefix="/saas/hotel", tags=["hotel-config"])
 class HotelConfigUpdate(BaseModel):
     """Schema for PATCH /saas/hotel/config."""
 
+    name: str | None = None
+    address: str | None = None
+    contact_phone: str | None = None
+    checkin_time: str | None = None
+    checkout_time: str | None = None
+    cancellation_policy: str | None = None
+    pet_policy: str | None = None
+    child_policy: str | None = None
+    amenities: str | None = None
     requires_payment_for_confirmation: bool | None = None
     allows_reservation_without_payment: bool | None = None
 
@@ -53,8 +62,17 @@ def update_config(
     body: HotelConfigUpdate,
     use_case: UpdateHotelConfigUseCase = Depends(get_update_hotel_config_use_case),
 ):
-    """Update hotel payment configuration."""
+    """Update hotel configuration."""
     result = use_case.execute(
+        name=body.name,
+        address=body.address,
+        contact_phone=body.contact_phone,
+        checkin_time=body.checkin_time,
+        checkout_time=body.checkout_time,
+        cancellation_policy=body.cancellation_policy,
+        pet_policy=body.pet_policy,
+        child_policy=body.child_policy,
+        amenities=body.amenities,
         requires_payment_for_confirmation=body.requires_payment_for_confirmation,
         allows_reservation_without_payment=body.allows_reservation_without_payment,
     )

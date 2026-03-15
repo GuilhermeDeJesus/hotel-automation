@@ -11,32 +11,36 @@ from app.domain.entities.reservation.reservation import Reservation
 
 class ReservationRepository(ABC):
     @abstractmethod
-    def save(self, reservation: Reservation) -> None:
-        """Persist a reservation or update existing one."""
+
+    def save(self, reservation: Reservation, hotel_id: str) -> None:
+        """Persist a reservation or update existing one for a specific hotel."""
         pass
 
     @abstractmethod
-    def find_by_id(self, reservation_id: str) -> Optional[Reservation]:
-        """Return a reservation by ID, or None."""
+
+    def find_by_id(self, reservation_id: str, hotel_id: str) -> Optional[Reservation]:
+        """Return a reservation by ID and hotel, or None."""
         pass
 
     @abstractmethod
-    def find_by_phone_number(self, phone_number: str) -> Optional[Reservation]:
-        """Return a reservation matching the given phone number, or None."""
+
+    def find_by_phone_number(self, phone_number: str, hotel_id: str) -> Optional[Reservation]:
+        """Return a reservation matching the given phone number and hotel, or None."""
         pass
 
     @abstractmethod
-    def find_confirmed_past_checkin_date(self, reference_date: date) -> List[Reservation]:
+
+    def find_confirmed_past_checkin_date(self, reference_date: date, hotel_id: str) -> List[Reservation]:
         """
-        Return reservations with status=CONFIRMED and check_in_date < reference_date.
-
-        Used by no-show job to mark reservations where guest did not show up.
+        Return reservations with status=CONFIRMED and check_in_date < reference_date for a hotel.
         """
         pass
 
     @abstractmethod
+
     def list_reservations(
         self,
+        hotel_id: str,
         from_date: Optional[date] = None,
         to_date: Optional[date] = None,
         status: Optional[str] = None,
@@ -44,19 +48,21 @@ class ReservationRepository(ABC):
         limit: int = 100,
     ) -> List[Reservation]:
         """
-        List reservations with optional filters.
+        List reservations for a hotel with optional filters.
         Dates filter by check_in_date range.
         """
         pass
 
     @abstractmethod
+
     def count_by_status(
         self,
+        hotel_id: str,
         from_date: Optional[date] = None,
         to_date: Optional[date] = None,
     ) -> dict[str, int]:
         """
-        Count reservations by status. Dates filter by check_in_date range.
+        Count reservations by status for a hotel. Dates filter by check_in_date range.
         Excludes CANCELLED and NO_SHOW.
         Returns dict like {"PENDING": n, "CONFIRMED": n, "CHECKED_IN": n, "CHECKED_OUT": n}.
         """
