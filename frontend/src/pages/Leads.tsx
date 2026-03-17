@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLeads } from "../hooks/useLeads";
+import { useTenant } from "../contexts/TenantContext";
 import Filters from "../components/Filters";
 import LeadsTable from "../components/LeadsTable";
 import LoadingState from "../components/LoadingState";
@@ -22,6 +23,16 @@ function defaultFilters(): DashboardFilters {
 export default function Leads() {
   const [filters, setFilters] = useState<DashboardFilters>(defaultFilters);
   const { data, error, isLoading, refetch } = useLeads(filters);
+  const { hotelId } = useTenant();
+
+  if (!hotelId) {
+    return (
+      <div>
+        <h1 className="page-title">Leads</h1>
+        <ErrorState message="Hotel não definido. Faça login novamente." onRetry={refetch} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

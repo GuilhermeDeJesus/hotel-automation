@@ -1,4 +1,4 @@
-"""Rooms API - CRUD for hotel rooms."""
+"""Rooms API - CRUD for hotel rooms. 100% multi-tenant seguro."""
 from collections.abc import Generator
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -10,6 +10,10 @@ from app.application.use_cases.update_room import UpdateRoomUseCase
 from app.application.use_cases.delete_room import DeleteRoomUseCase
 from app.infrastructure.persistence.sql.database import SessionLocal
 from app.infrastructure.persistence.sql.room_repository_sql import RoomRepositorySQL
+
+# IMPORTANTE: Dep de autenticação
+from app.interfaces.dependencies.auth import get_current_user
+from app.infrastructure.persistence.sql.models import UserModel
 
 router = APIRouter(prefix="/saas/rooms", tags=["rooms"])
 
@@ -67,18 +71,21 @@ def get_delete_room_use_case() -> Generator[DeleteRoomUseCase, None, None]:
 @router.get("")
 def list_rooms(
     use_case: ListRoomsUseCase = Depends(get_list_rooms_use_case),
+    user: UserModel = Depends(get_current_user)
 ):
-    """List all active rooms."""
-    return {"items": use_case.execute()}
+    """List all active rooms for the authenticated user's hotel."""
+    return {"items": use_case.execute(hotel_id=user.hotel_id)}
 
 
 @router.post("")
 def create_room(
     body: CreateRoomRequest,
     use_case: CreateRoomUseCase = Depends(get_create_room_use_case),
+    user: UserModel = Depends(get_current_user)
 ):
-    """Create a new room."""
+    """Create a new room for the authenticated user's hotel."""
     result = use_case.execute(
+        hotel_id=user.hotel_id,
         number=body.number,
         room_type=body.room_type,
         daily_rate=body.daily_rate,
@@ -94,9 +101,11 @@ def update_room(
     room_number: str,
     body: UpdateRoomRequest,
     use_case: UpdateRoomUseCase = Depends(get_update_room_use_case),
+    user: UserModel = Depends(get_current_user)
 ):
-    """Update a room by number."""
+    """Update a room by number for the authenticated user's hotel."""
     result = use_case.execute(
+        hotel_id=user.hotel_id,
         room_number=room_number,
         room_type=body.room_type,
         daily_rate=body.daily_rate,
@@ -112,9 +121,13 @@ def update_room(
 def delete_room(
     room_number: str,
     use_case: DeleteRoomUseCase = Depends(get_delete_room_use_case),
+    user: UserModel = Depends(get_current_user)
 ):
-    """Soft delete (deactivate) a room."""
-    result = use_case.execute(room_number=room_number)
+    """Soft delete (deactivate) a room for the authenticated user's hotel."""
+    result = use_case.execute(
+        hotel_id=user.hotel_id,
+        room_number=room_number
+    )
     if not result["success"]:
         raise HTTPException(status_code=404, detail=result["error"])
     return {"message": result["message"]}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useKpisCompare } from "../hooks/useKpisCompare";
+import { useTenant } from "../contexts/TenantContext";
 import Filters from "../components/Filters";
 import KpiCard from "../components/KpiCard";
 import LeadsChart from "../components/LeadsChart";
@@ -30,6 +31,16 @@ function defaultFilters(): DashboardFilters {
 export default function Dashboard() {
   const [filters, setFilters] = useState<DashboardFilters>(defaultFilters);
   const { data, error, isLoading, refetch } = useKpisCompare(filters);
+  const { hotelId } = useTenant();
+
+  if (!hotelId) {
+    return (
+      <div>
+        <h1 className="page-title">Overview</h1>
+        <ErrorState message="Hotel não definido. Faça login novamente." onRetry={refetch} />
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

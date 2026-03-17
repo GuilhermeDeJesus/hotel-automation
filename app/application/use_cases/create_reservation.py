@@ -24,13 +24,13 @@ class CreateReservationUseCase:
         self.reservation_repository = reservation_repository
         self.room_repository = room_repository
 
-    def check_availability(self, check_in, check_out):
+    def check_availability(self, hotel_id, check_in, check_out):
         """Retorna quartos disponíveis para o período."""
-        return self.room_repository.find_available(check_in, check_out)
+        return self.room_repository.find_available(hotel_id, check_in, check_out)
 
-    def create(self, request_dto: CreateReservationRequestDTO) -> CreateReservationResponseDTO:
+    def create(self, hotel_id: str, request_dto: CreateReservationRequestDTO) -> CreateReservationResponseDTO:
         """Cria reserva PENDING e persiste."""
-        room = self.room_repository.get_by_number(request_dto.room_number)
+        room = self.room_repository.get_by_number(hotel_id, request_dto.room_number)
         if not room:
             return CreateReservationResponseDTO(
                 message=f"Quarto {request_dto.room_number} não encontrado.",
@@ -38,6 +38,7 @@ class CreateReservationUseCase:
             )
 
         available = self.room_repository.is_available(
+            hotel_id,
             request_dto.room_number,
             request_dto.check_in,
             request_dto.check_out,
@@ -67,9 +68,10 @@ class CreateReservationUseCase:
             stay_period=stay_period,
             room_number=request_dto.room_number,
             total_amount=total_amount,
+            hotel_id=hotel_id,
         )
 
-        self.reservation_repository.save(reservation)
+        self.reservation_repository.save(reservation, hotel_id)
 
         return CreateReservationResponseDTO(
             message="Reserva criada com sucesso! Envie 'confirmar reserva' para confirmar.",

@@ -570,6 +570,7 @@ class SaaSRepositorySQL:
 
     def list_leads(
         self,
+        hotel_id: str,
         start_date: date | None,
         end_date: date | None,
         status: str | None,
@@ -577,7 +578,7 @@ class SaaSRepositorySQL:
         start_dt = self._start_of_day(start_date)
         end_dt = self._end_of_day(end_date)
 
-        query = self.session.query(LeadModel)
+        query = self.session.query(LeadModel).filter(LeadModel.hotel_id == hotel_id)
         if start_dt:
             query = query.filter(LeadModel.first_seen_at >= start_dt)
         if end_dt:
@@ -599,11 +600,18 @@ class SaaSRepositorySQL:
             for row in rows
         ]
 
-    def get_funnel(self, start_date: date | None, end_date: date | None) -> dict[str, Any]:
+    def get_funnel(
+        self,
+        hotel_id: str,
+        start_date: date | None,
+        end_date: date | None,
+    ) -> dict[str, Any]:
         start_dt = self._start_of_day(start_date)
         end_dt = self._end_of_day(end_date)
 
-        query = self.session.query(LeadModel.stage, func.count(LeadModel.id))
+        query = self.session.query(LeadModel.stage, func.count(LeadModel.id)).filter(
+            LeadModel.hotel_id == hotel_id
+        )
         if start_dt:
             query = query.filter(LeadModel.first_seen_at >= start_dt)
         if end_dt:

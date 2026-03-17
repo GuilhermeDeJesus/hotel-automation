@@ -1,15 +1,21 @@
-"""Seed multi-tenant data for development/testing (Docker version)."""
+"""Seed multi-tenant data for development/testing. Padrão: Docker."""
 import uuid
 import os
 import sys
+from pathlib import Path
 from datetime import datetime
 from passlib.hash import bcrypt
 
 # Adicionar diretório raiz ao PYTHONPATH
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 
-# Configurar para uso local fora do Docker
-os.environ['DATABASE_URL'] = 'postgresql://postgres:postgres@localhost:5432/hotel'
+# Carrega .env (DATABASE_URL=...@db:5432/hotel para Docker)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(PROJECT_ROOT / ".env")
+except ImportError:
+    pass
 
 from app.infrastructure.persistence.sql.database import SessionLocal, init_db
 from app.infrastructure.persistence.sql.models import (
@@ -24,10 +30,9 @@ def seed_multi_tenant_data() -> None:
         session = SessionLocal()
     except Exception as e:
         print(f"❌ Erro ao conectar ao banco: {str(e)}")
-        print("\n💡 Solução:")
-        print("1. Verifique se o PostgreSQL está rodando na porta 5432")
-        print("2. Ou use Docker: docker compose up -d")
-        print("3. Ou configure DATABASE_URL para seu banco")
+        print("\n💡 Solução (padrão Docker):")
+        print("1. Suba os containers: docker compose up -d db redis")
+        print("2. Rode o seed dentro do container: docker compose exec app python scripts/seed_multi_tenant_local.py")
         return
 
     print("🏨 Criando dados multi-tenant...")
@@ -108,7 +113,9 @@ def seed_multi_tenant_data() -> None:
         else:
             created_hotels.append(hotel_data)
             print(f"  ⏭️  Hotel já existe: {hotel_data['name']}")
-    
+
+    session.commit()  # Persiste hotéis antes de FKs (rooms, customers, etc.)
+
     # 2. Criar quartos para cada hotel
     rooms_by_hotel = {
         "d03dbe9a-1812-46dd-8e8c-c8fedace48a0": [

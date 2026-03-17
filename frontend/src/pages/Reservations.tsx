@@ -7,6 +7,7 @@ import ErrorState from "../components/ErrorState";
 import EmptyState from "../components/EmptyState";
 import { IconInbox } from "../components/Icons";
 import { markReservationNoShow } from "../api/client";
+import { useTenant } from "../contexts/TenantContext";
 import type { ReservationsFilters as ReservationsFiltersType } from "../types/api";
 
 function defaultFilters(): ReservationsFiltersType {
@@ -22,14 +23,19 @@ function defaultFilters(): ReservationsFiltersType {
 export default function Reservations() {
   const [filters, setFilters] = useState<ReservationsFiltersType>(defaultFilters);
   const { data, error, isLoading, refetch } = useReservations(filters);
+  const { hotelId } = useTenant();
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const handleMarkNoShow = async (id: string) => {
+    if (!hotelId) {
+      setActionError("Hotel não definido. Faça login novamente.");
+      return;
+    }
     setActionError(null);
     setActionLoading(id);
     try {
-      await markReservationNoShow(id);
+      await markReservationNoShow(hotelId, id);
       refetch();
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Erro ao marcar no-show");

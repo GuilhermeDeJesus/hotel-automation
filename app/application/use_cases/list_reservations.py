@@ -13,6 +13,7 @@ class ListReservationsUseCase:
 
     def execute(
         self,
+        hotel_id: str,
         from_date: Optional[date] = None,
         to_date: Optional[date] = None,
         status: Optional[str] = None,
@@ -20,6 +21,7 @@ class ListReservationsUseCase:
         limit: int = 100,
     ) -> list[dict[str, Any]]:
         reservations = self.reservation_repository.list_reservations(
+            hotel_id=hotel_id,
             from_date=from_date,
             to_date=to_date,
             status=status,
@@ -43,3 +45,4 @@ class ListReservationsUseCase:
             "checked_in_at": r.checked_in_at.isoformat() if r.checked_in_at else None,
             "checked_out_at": r.checked_out_at.isoformat() if r.checked_out_at else None,
         }
+

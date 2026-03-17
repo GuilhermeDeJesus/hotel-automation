@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchPayments } from "../api/client";
+import { useTenant } from "../contexts/TenantContext";
 import type { PaymentsResponse, PaymentsFilters } from "../types/api";
 
 interface UsePaymentsResult {
@@ -14,10 +15,18 @@ export function usePayments(filters?: PaymentsFilters): UsePaymentsResult {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const { hotelId } = useTenant();
+
   const load = () => {
+    if (!hotelId) {
+      setError("Hotel não definido. Faça login novamente.");
+      setData(null);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError(null);
-    fetchPayments({
+    fetchPayments(hotelId, {
       reservation_id: filters?.reservation_id,
       status: filters?.status || undefined,
       limit: 100,

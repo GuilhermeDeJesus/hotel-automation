@@ -1,9 +1,7 @@
-"""Update an existing room."""
+"""Update an existing room. Multi-tenant seguro."""
 from __future__ import annotations
-
 from app.domain.entities.room.room import Room
 from app.domain.repositories.room_repository import RoomRepository
-
 
 class UpdateRoomUseCase:
     def __init__(self, room_repository: RoomRepository):
@@ -11,13 +9,14 @@ class UpdateRoomUseCase:
 
     def execute(
         self,
+        hotel_id: str,
         room_number: str,
         room_type: str | None = None,
         daily_rate: float | None = None,
         max_guests: int | None = None,
         status: str | None = None,
     ) -> dict:
-        existing = self.room_repository.get_by_number(room_number)
+        existing = self.room_repository.get_by_number(hotel_id, room_number)
         if not existing:
             return {"success": False, "error": f"Quarto {room_number} não encontrado."}
 
@@ -29,7 +28,7 @@ class UpdateRoomUseCase:
             status=status if status is not None else existing.status,
             id=existing.id,
         )
-        saved = self.room_repository.save(room)
+        saved = self.room_repository.save(room, hotel_id)
         return {
             "success": True,
             "room": {

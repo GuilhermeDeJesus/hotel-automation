@@ -273,7 +273,7 @@ export const hotelConfigApi = {
 };
 
 // Custom hooks for hotel configuration
-export const useHotelConfig = (hotelId: string) => {
+export const useHotelConfig = (hotelId: string | null) => {
   const [config, setConfig] = useState<HotelConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -283,6 +283,11 @@ export const useHotelConfig = (hotelId: string) => {
       try {
         setLoading(true);
         setError(null);
+        if (!hotelId) {
+          setConfig(null);
+          setLoading(false);
+          return;
+        }
         const data = await hotelConfigApi.getHotelConfig(hotelId);
         setConfig(data);
       } catch (err: any) {
@@ -300,6 +305,9 @@ export const useHotelConfig = (hotelId: string) => {
   const updateConfig = async (newConfig: Partial<HotelConfig>) => {
     try {
       setError(null);
+      if (!hotelId) {
+        throw new Error("Hotel não definido.");
+      }
       const result = await hotelConfigApi.updateHotelConfig(hotelId, newConfig);
       if (config) {
         setConfig({ ...config, ...newConfig });

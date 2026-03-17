@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchLeads } from "../api/client";
+import { useTenant } from "../contexts/TenantContext";
 import type { LeadsResponse, DashboardFilters } from "../types/api";
 
 interface UseLeadsResult {
@@ -14,10 +15,18 @@ export function useLeads(filters?: DashboardFilters): UseLeadsResult {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const { hotelId } = useTenant();
+
   const load = () => {
+    if (!hotelId) {
+      setError("Hotel não definido. Faça login novamente.");
+      setData(null);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError(null);
-    fetchLeads({
+    fetchLeads(hotelId, {
       from: filters?.from,
       to: filters?.to,
       status: filters?.status || undefined,
@@ -29,7 +38,7 @@ export function useLeads(filters?: DashboardFilters): UseLeadsResult {
 
   useEffect(() => {
     load();
-  }, [filters?.from, filters?.to, filters?.status]);
+  }, [hotelId, filters?.from, filters?.to, filters?.status]);
 
   return { data, error, isLoading, refetch: load };
 }

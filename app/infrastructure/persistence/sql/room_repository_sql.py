@@ -176,5 +176,6 @@ class RoomRepositorySQL(RoomRepository):
             daily_rate=room_model.daily_rate,
             max_guests=room_model.max_guests,
             status=room_model.status,
+            hotel_id=room_model.hotel_id,
             id=room_model.id,
         )

@@ -10,8 +10,8 @@ class GetHotelConfigUseCase:
     def __init__(self, hotel_repository: HotelRepository):
         self.hotel_repository = hotel_repository
 
-    def execute(self) -> Optional[dict[str, Any]]:
-        hotel = self.hotel_repository.get_active_hotel()
+    def execute(self, hotel_id: str) -> Optional[dict[str, Any]]:
+        hotel = self.hotel_repository.get_active_hotel(hotel_id)
         if not hotel:
             return None
         return {

@@ -67,11 +67,11 @@ class RoomRepository(ABC):
         pass
 
     @abstractmethod
-    def save(self, room: Room) -> Room:
-        """Create or update a room. Returns the saved room with id set on create."""
+    def save(self, room: Room, hotel_id: str) -> Room:
+        """Create or update a room for a hotel. Returns the saved room with id set on create."""
         pass
 
     @abstractmethod
-    def deactivate(self, room_number: str) -> bool:
+    def deactivate(self, hotel_id: str, room_number: str) -> bool:
         """Soft delete a room by setting is_active=False. Returns True if found and deactivated."""
         pass

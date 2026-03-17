@@ -9,6 +9,8 @@ from app.application.use_cases.list_payments import ListPaymentsUseCase
 from app.infrastructure.persistence.sql.database import SessionLocal
 from app.infrastructure.persistence.sql.payment_repository_sql import PaymentRepositorySQL
 from app.infrastructure.persistence.sql.reservation_repository_sql import ReservationRepositorySQL
+from app.interfaces.dependencies.auth import get_current_user
+from app.infrastructure.persistence.sql.models import UserModel
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/saas/payments", tags=["payments"])
@@ -47,10 +49,13 @@ def list_payments(
     reservation_id: str | None = Query(default=None),
     status: str | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=500),
+    current_user: UserModel = Depends(get_current_user),
     use_case: ListPaymentsUseCase = Depends(get_list_payments_use_case),
 ):
     """List payments with optional filters."""
+    hotel_id = current_user.hotel_id
     items = use_case.execute(
+        hotel_id=hotel_id,
         reservation_id=reservation_id,
         status=status,
         limit=limit,
@@ -95,10 +100,12 @@ def _send_whatsapp_confirmation(phone: str) -> bool:
 def confirm_payment(
     payment_id: str,
     transaction_id: str | None = Query(default=None),
+    current_user: UserModel = Depends(get_current_user),
     use_case: ConfirmPaymentManualUseCase = Depends(get_confirm_payment_use_case),
 ):
     """Confirm payment manually (Fase 0 - comprovante recebido)."""
-    result = use_case.execute(payment_id, transaction_id=transaction_id)
+    hotel_id = current_user.hotel_id
+    result = use_case.execute(hotel_id=hotel_id, payment_id=payment_id, transaction_id=transaction_id)
     if result["success"]:
         guest_phone = result.get("guest_phone")
         if guest_phone:

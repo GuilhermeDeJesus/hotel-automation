@@ -1,9 +1,7 @@
-"""Create a new room."""
+"""Create a new room. Multi-tenant seguro."""
 from __future__ import annotations
-
 from app.domain.entities.room.room import Room
 from app.domain.repositories.room_repository import RoomRepository
-
 
 class CreateRoomUseCase:
     def __init__(self, room_repository: RoomRepository):
@@ -11,12 +9,13 @@ class CreateRoomUseCase:
 
     def execute(
         self,
+        hotel_id: str,
         number: str,
         room_type: str,
         daily_rate: float,
         max_guests: int,
     ) -> dict:
-        existing = self.room_repository.get_by_number(number)
+        existing = self.room_repository.get_by_number(hotel_id, number)
         if existing:
             return {"success": False, "error": f"Quarto {number} já existe."}
 
@@ -27,7 +26,7 @@ class CreateRoomUseCase:
             max_guests=max_guests,
             status="AVAILABLE",
         )
-        saved = self.room_repository.save(room)
+        saved = self.room_repository.save(room, hotel_id)
         return {
             "success": True,
             "room": {

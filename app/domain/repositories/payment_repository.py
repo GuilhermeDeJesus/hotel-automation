@@ -35,3 +35,8 @@ class PaymentRepository(ABC):
     ) -> List[Payment]:
         """Lista pagamentos de um hotel com filtros opcionais."""
         pass
+
+    @abstractmethod
+    def find_by_id_global(self, payment_id: str) -> Optional[Payment]:
+        """Retorna pagamento por ID sem filtro de hotel (uso especial em webhooks)."""
+        pass

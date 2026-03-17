@@ -13,8 +13,8 @@ class ConfirmReservationUseCase:
     def __init__(self, reservation_repository: ReservationRepository):
         self.reservation_repository = reservation_repository
 
-    def prepare_confirmation(self, request_dto: ConfirmReservationRequestDTO) -> ConfirmReservationResponseDTO:
-        reservation = self.reservation_repository.find_by_phone_number(request_dto.phone)
+    def prepare_confirmation(self, hotel_id: str, request_dto: ConfirmReservationRequestDTO) -> ConfirmReservationResponseDTO:
+        reservation = self.reservation_repository.find_by_phone_number(request_dto.phone, hotel_id)
         if not reservation:
             return ConfirmReservationResponseDTO(
                 message="Reserva nao encontrada para este telefone.",
@@ -49,8 +49,8 @@ class ConfirmReservationUseCase:
             status=reservation.status.name,
         )
 
-    def confirm(self, request_dto: ConfirmReservationRequestDTO) -> ConfirmReservationResponseDTO:
-        reservation = self.reservation_repository.find_by_phone_number(request_dto.phone)
+    def confirm(self, hotel_id: str, request_dto: ConfirmReservationRequestDTO) -> ConfirmReservationResponseDTO:
+        reservation = self.reservation_repository.find_by_phone_number(request_dto.phone, hotel_id)
         if not reservation:
             return ConfirmReservationResponseDTO(
                 message="Reserva nao encontrada para este telefone.",
@@ -77,7 +77,7 @@ class ConfirmReservationUseCase:
             )
 
         reservation.confirm()
-        self.reservation_repository.save(reservation)
+        self.reservation_repository.save(reservation, hotel_id)
 
         return ConfirmReservationResponseDTO(
             message="Reserva confirmada com sucesso.",
@@ -86,9 +86,9 @@ class ConfirmReservationUseCase:
             status=reservation.status.name,
         )
 
-    def get_formatted_summary_for_phone(self, phone: str) -> str | None:
+    def get_formatted_summary_for_phone(self, hotel_id: str, phone: str) -> str | None:
         """Retorna resumo formatado ou None se não houver reserva."""
-        reservation = self.reservation_repository.find_by_phone_number(phone)
+        reservation = self.reservation_repository.find_by_phone_number(phone, hotel_id)
         if not reservation:
             return None
         return self.get_formatted_summary(reservation)

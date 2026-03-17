@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useFunnel } from "../hooks/useFunnel";
 import { useJourneyFunnel } from "../hooks/useJourneyFunnel";
+import { useTenant } from "../contexts/TenantContext";
 import Filters from "../components/Filters";
 import FunnelChart from "../components/FunnelChart";
 import JourneyFunnelChart from "../components/JourneyFunnelChart";
@@ -28,6 +29,7 @@ export default function Funnel() {
     isLoading: journeyLoading,
     refetch: refetchJourney,
   } = useJourneyFunnel(filters);
+  const { hotelId } = useTenant();
 
   const anyLoading = isLoading || journeyLoading;
   const anyError = error || journeyError;
@@ -35,6 +37,15 @@ export default function Funnel() {
     refetchFunnel();
     refetchJourney();
   };
+
+  if (!hotelId) {
+    return (
+      <div>
+        <h1 className="page-title">Funil de conversão</h1>
+        <ErrorState message="Hotel não definido. Faça login novamente." onRetry={refetch} />
+      </div>
+    );
+  }
 
   if (anyLoading) {
     return (

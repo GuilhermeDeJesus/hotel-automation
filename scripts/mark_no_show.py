@@ -29,16 +29,18 @@ def mark_no_show(reference_date: date | None = None) -> tuple[int, int]:
     init_db()
     session = SessionLocal()
     repo = ReservationRepositorySQL(session)
+    # TODO: obter hotel_id do contexto/config/env
+    hotel_id = os.getenv("HOTEL_ID") or "default-hotel-id"  # Ajuste conforme necessário
 
     try:
-        reservations = repo.find_confirmed_past_checkin_date(ref)
+        reservations = repo.find_confirmed_past_checkin_date(ref, hotel_id)
         marked = 0
         errors = 0
 
         for reservation in reservations:
             try:
                 reservation.mark_as_no_show()
-                repo.save(reservation)
+                repo.save(reservation, hotel_id)
                 marked += 1
                 print(
                     f"  NO_SHOW: reserva {reservation.id} "

@@ -28,8 +28,8 @@ class PreCheckInUseCase:
     def __init__(self, reservation_repository: ReservationRepository):
         self.reservation_repository = reservation_repository
 
-    def execute(self, request: PreCheckInRequestDTO) -> PreCheckInResponseDTO:
-        reservation = self.reservation_repository.find_by_phone_number(request.phone)
+    def execute(self, hotel_id: str, request: PreCheckInRequestDTO) -> PreCheckInResponseDTO:
+        reservation = self.reservation_repository.find_by_phone_number(request.phone, hotel_id)
         if not reservation:
             return PreCheckInResponseDTO(
                 success=False,
@@ -49,7 +49,7 @@ class PreCheckInUseCase:
                 estimated_arrival_time=request.estimated_arrival_time,
             )
             reservation.accept_terms()
-            self.reservation_repository.save(reservation)
+            self.reservation_repository.save(reservation, hotel_id)
         except Exception as e:
             return PreCheckInResponseDTO(success=False, message=str(e))
 

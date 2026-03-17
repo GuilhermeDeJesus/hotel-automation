@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchFunnelJourney } from "../api/client";
+import { useTenant } from "../contexts/TenantContext";
 import type { JourneyFunnelResponse, DashboardFilters } from "../types/api";
 
 interface UseJourneyFunnelResult {
@@ -14,10 +15,18 @@ export function useJourneyFunnel(filters?: DashboardFilters): UseJourneyFunnelRe
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const { hotelId } = useTenant();
+
   const load = () => {
+    if (!hotelId) {
+      setError("Hotel não definido. Faça login novamente.");
+      setData(null);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError(null);
-    fetchFunnelJourney({
+    fetchFunnelJourney(hotelId, {
       from: filters?.from,
       to: filters?.to,
     })

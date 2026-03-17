@@ -11,6 +11,7 @@ class UpdateHotelConfigUseCase:
 
     def execute(
         self,
+        hotel_id: str,
         name: str | None = None,
         address: str | None = None,
         contact_phone: str | None = None,
@@ -23,7 +24,7 @@ class UpdateHotelConfigUseCase:
         requires_payment_for_confirmation: bool | None = None,
         allows_reservation_without_payment: bool | None = None,
     ) -> dict:
-        hotel = self.hotel_repository.get_active_hotel()
+        hotel = self.hotel_repository.get_active_hotel(hotel_id)
         if not hotel:
             return {"success": False, "error": "Nenhum hotel ativo encontrado."}
 
@@ -60,7 +61,7 @@ class UpdateHotelConfigUseCase:
                 amenities=amenities if amenities is not None else hotel.policies.amenities,
             )
 
-        self.hotel_repository.save(hotel)
+        self.hotel_repository.save(hotel_id, hotel)
         return {
             "success": True,
             "message": "Configuração atualizada.",

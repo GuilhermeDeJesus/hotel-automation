@@ -52,8 +52,8 @@ class RoomOrderUseCase:
         self.reservation_repository = reservation_repository
         self.order_repository = order_repository
 
-    def execute(self, request: RoomOrderRequestDTO) -> RoomOrderResponseDTO:
-        reservation = self.reservation_repository.find_by_phone_number(request.phone)
+    def execute(self, hotel_id: str, request: RoomOrderRequestDTO) -> RoomOrderResponseDTO:
+        reservation = self.reservation_repository.find_by_phone_number(request.phone, hotel_id)
         if not reservation:
             return RoomOrderResponseDTO(success=False, message="Nenhuma reserva encontrada.")
 
@@ -73,6 +73,7 @@ class RoomOrderUseCase:
         ]
         order_id = str(uuid.uuid4())[:8]
         self.order_repository.save(
+            hotel_id=hotel_id,
             order_id=order_id,
             reservation_id=reservation.id,
             items_json=json.dumps(items_data),

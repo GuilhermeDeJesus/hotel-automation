@@ -7,15 +7,21 @@ import ErrorState from "../components/ErrorState";
 import EmptyState from "../components/EmptyState";
 import { IconInbox } from "../components/Icons";
 import { confirmPaymentManual } from "../api/client";
+import { useTenant } from "../contexts/TenantContext";
 import type { PaymentsFilters as PaymentsFiltersType } from "../types/api";
 
 export default function Payments() {
   const [filters, setFilters] = useState<PaymentsFiltersType>({});
   const { data, error, isLoading, refetch } = usePayments(filters);
+  const { hotelId } = useTenant();
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const handleConfirm = async (id: string) => {
+    if (!hotelId) {
+      setActionError("Hotel não definido. Faça login novamente.");
+      return;
+    }
     setActionError(null);
     setActionLoading(id);
     try {

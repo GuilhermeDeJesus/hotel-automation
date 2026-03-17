@@ -13,11 +13,34 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, R
 from app.application.use_cases.get_saas_dashboard import GetSaaSDashboardUseCase
 from app.application.use_cases.get_journey_funnel import GetJourneyFunnelUseCase
 from app.infrastructure.persistence.sql.database import SessionLocal
-from app.infrastructure.persistence.sql.models import SaaSAdminAuditEventModel
-from app.interfaces.dependencies import get_saas_dashboard_use_case, get_journey_funnel_use_case
+from app.infrastructure.persistence.sql.models import SaaSAdminAuditEventModel, UserModel
+from app.interfaces.dependencies.auth import get_current_user
+from app.interfaces.dependencies import (
+    get_saas_dashboard_use_case, 
+    get_journey_funnel_use_case
+)
 
 router = APIRouter(prefix="/saas", tags=["saas"])
 logger = logging.getLogger(__name__)
+
+
+def _resolve_effective_hotel_id(user: UserModel, x_hotel_id: str | None) -> str | None:
+    """
+    Resolve o hotel efetivo a ser usado nos endpoints SaaS.
+
+    Regra:
+    - Se o usuário tiver `hotel_id` atrelado, sempre usa esse (funcionário/manager de um hotel).
+    - Se NÃO tiver `hotel_id` mas for papel administrativo (admin/superadmin/owner),
+      pode usar o hotel vindo no header `X-Hotel-Id`.
+    """
+    if user.hotel_id:
+        return user.hotel_id
+
+    admin_roles = {"admin", "superadmin", "owner", "system_admin"}
+    if getattr(user, "role", None) in admin_roles and x_hotel_id:
+        return x_hotel_id
+
+    return None
 
 
 def _audit_cache_invalidate(
@@ -4542,9 +4565,21 @@ def get_leads(
     to_date: date | None = Query(default=None, alias="to"),
     status: str | None = Query(default=None),
     use_case: GetSaaSDashboardUseCase = Depends(get_saas_dashboard_use_case),
+    user: UserModel = Depends(get_current_user),
+    x_hotel_id: str | None = Header(default=None, alias="X-Hotel-Id"),
 ):
+    """
+    Lista leads do funil SaaS.
+
+    - Usuários comuns usam sempre `user.hotel_id` do token.
+    - Super admins (roles administrativos) podem escolher o hotel via header `X-Hotel-Id`.
+    """
+    effective_hotel_id = _resolve_effective_hotel_id(user, x_hotel_id)
+    if not effective_hotel_id:
+        raise HTTPException(status_code=403, detail="Usuário sem hotel associado")
+
     return {
-        "items": use_case.get_leads(from_date, to_date, status),
+        "items": use_case.get_leads(effective_hotel_id, from_date, to_date, status),
     }
 
 
@@ -4553,8 +4588,14 @@ def get_funnel(
     from_date: date | None = Query(default=None, alias="from"),
     to_date: date | None = Query(default=None, alias="to"),
     use_case: GetSaaSDashboardUseCase = Depends(get_saas_dashboard_use_case),
+    user: UserModel = Depends(get_current_user),
+    x_hotel_id: str | None = Header(default=None, alias="X-Hotel-Id"),
 ):
-    return use_case.get_funnel(from_date, to_date)
+    effective_hotel_id = _resolve_effective_hotel_id(user, x_hotel_id)
+    if not effective_hotel_id:
+        raise HTTPException(status_code=403, detail="Usuário sem hotel associado")
+
+    return use_case.get_funnel(effective_hotel_id, from_date, to_date)
 
 
 @router.get("/funnel/journey")
@@ -4562,9 +4603,17 @@ def get_funnel_journey(
     from_date: date | None = Query(default=None, alias="from"),
     to_date: date | None = Query(default=None, alias="to"),
     use_case: GetJourneyFunnelUseCase = Depends(get_journey_funnel_use_case),
+    user: UserModel = Depends(get_current_user),
+    x_hotel_id: str | None = Header(default=None, alias="X-Hotel-Id"),
 ):
     """Journey funnel: Lead → Reserva → Confirmada → Check-in → Check-out."""
-    return use_case.execute(from_date=from_date, to_date=to_date)
+    effective_hotel_id = _resolve_effective_hotel_id(user, x_hotel_id)
+    if not effective_hotel_id:
+        raise HTTPException(status_code=403, detail="Usuário sem hotel associado")
+
+    return use_case.execute(
+        hotel_id=effective_hotel_id, from_date=from_date, to_date=to_date
+    )
 
 
 @router.get("/timeseries")
@@ -4575,7 +4624,13 @@ def get_timeseries(
     status: str | None = Query(default=None),
     granularity: str | None = Query(default="day"),
     use_case: GetSaaSDashboardUseCase = Depends(get_saas_dashboard_use_case),
+    user: UserModel = Depends(get_current_user),
+    x_hotel_id: str | None = Header(default=None, alias="X-Hotel-Id"),
 ):
+    effective_hotel_id = _resolve_effective_hotel_id(user, x_hotel_id)
+    if not effective_hotel_id:
+        raise HTTPException(status_code=403, detail="Usuário sem hotel associado")
+
     return use_case.get_timeseries(
         from_date,
         to_date,
@@ -4593,7 +4648,13 @@ def get_kpis_comparison(
     status: str | None = Query(default=None),
     granularity: str | None = Query(default="day"),
     use_case: GetSaaSDashboardUseCase = Depends(get_saas_dashboard_use_case),
+    user: UserModel = Depends(get_current_user),
+    x_hotel_id: str | None = Header(default=None, alias="X-Hotel-Id"),
 ):
+    effective_hotel_id = _resolve_effective_hotel_id(user, x_hotel_id)
+    if not effective_hotel_id:
+        raise HTTPException(status_code=403, detail="Usuário sem hotel associado")
+
     return use_case.get_kpis_comparison(
         from_date,
         to_date,

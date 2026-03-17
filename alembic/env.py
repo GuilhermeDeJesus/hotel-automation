@@ -5,14 +5,21 @@ from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
-# from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+# Carrega .env antes de importar database (que exige DATABASE_URL)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(PROJECT_ROOT / ".env")
+except ImportError:
+    pass
+
 from app.infrastructure.persistence.sql.database import Base
 import app.infrastructure.persistence.sql.models  # noqa: F401
+import app.infrastructure.persistence.sql.hotel_config_models  # noqa: F401 - hotel_configs, etc.
 
 config = context.config
 

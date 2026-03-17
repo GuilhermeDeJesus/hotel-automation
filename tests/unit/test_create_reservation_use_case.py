@@ -18,25 +18,25 @@ class RoomRepositoryStub:
             type("Room", (), {"number": "102", "room_type": "DOUBLE", "daily_rate": 250.0})(),
         ]
 
-    def get_by_number(self, room_number: str):
+    def get_by_number(self, hotel_id: str, room_number: str):
         for r in self._rooms:
             if r.number == room_number:
                 return r
         return None
 
-    def find_available(self, check_in, check_out, exclude_room=None):
+    def find_available(self, hotel_id: str, check_in, check_out, exclude_room=None):
         return [r for r in self._rooms if r.number != exclude_room]
 
-    def is_available(self, room_number: str, check_in, check_out) -> bool:
-        return self.get_by_number(room_number) is not None
+    def is_available(self, hotel_id: str, room_number: str, check_in, check_out) -> bool:
+        return self.get_by_number(hotel_id, room_number) is not None
 
     def list_all(self):
         return self._rooms
 
-    def save(self, room):
+    def save(self, room, hotel_id: str):
         return room
 
-    def deactivate(self, room_number: str):
+    def deactivate(self, hotel_id: str, room_number: str):
         return True
 
 
@@ -52,7 +52,10 @@ def test_create_reservation_success():
         room_repository=room_repo,
     )
 
+    hotel_id = "hotel-1"
+
     response = use_case.create(
+        hotel_id,
         CreateReservationRequestDTO(
             phone="5561999999999",
             check_in=start,
@@ -66,7 +69,7 @@ def test_create_reservation_success():
     assert "criada" in response.message.lower()
     assert response.reservation_id is not None
 
-    persisted = reservation_repo.find_by_phone_number("5561999999999")
+    persisted = reservation_repo.find_by_phone_number("5561999999999", hotel_id)
     assert persisted is not None
     assert persisted.status == ReservationStatus.PENDING
     assert persisted.guest_name == "Maria Santos"
@@ -86,7 +89,10 @@ def test_create_reservation_room_not_found():
         room_repository=room_repo,
     )
 
+    hotel_id = "hotel-1"
+
     response = use_case.create(
+        hotel_id,
         CreateReservationRequestDTO(
             phone="5561999999999",
             check_in=start,
@@ -112,6 +118,8 @@ def test_check_availability_returns_rooms():
         room_repository=room_repo,
     )
 
-    rooms = use_case.check_availability(start, end)
+    hotel_id = "hotel-1"
+
+    rooms = use_case.check_availability(hotel_id, start, end)
     assert len(rooms) >= 1
     assert any(r.number == "101" for r in rooms)

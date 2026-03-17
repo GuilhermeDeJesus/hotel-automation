@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchReservations } from "../api/client";
+import { useTenant } from "../contexts/TenantContext";
 import type { ReservationsResponse, ReservationsFilters } from "../types/api";
 
 interface UseReservationsResult {
@@ -14,10 +15,18 @@ export function useReservations(filters?: ReservationsFilters): UseReservationsR
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const { hotelId } = useTenant();
+
   const load = () => {
+    if (!hotelId) {
+      setError("Hotel não definido. Faça login novamente.");
+      setData(null);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError(null);
-    fetchReservations({
+    fetchReservations(hotelId, {
       from: filters?.from,
       to: filters?.to,
       status: filters?.status || undefined,

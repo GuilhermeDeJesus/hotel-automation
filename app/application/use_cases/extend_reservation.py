@@ -23,7 +23,7 @@ class ExtendReservationUseCase:
         self.room_repository = room_repository
 
     def prepare_extension(
-        self, request_dto: ExtendReservationRequestDTO
+        self, hotel_id: str, request_dto: ExtendReservationRequestDTO
     ) -> ExtendReservationResponseDTO:
         """
         Prepara extensão: retorna reserva ativa e data atual de saída.
@@ -32,7 +32,7 @@ class ExtendReservationUseCase:
             DTO com can_extend=True se houver reserva ativa (CONFIRMED ou CHECKED_IN)
         """
         reservation = self.reservation_repository.find_by_phone_number(
-            request_dto.phone
+            request_dto.phone, hotel_id
         )
         if not reservation:
             return ExtendReservationResponseDTO(
@@ -74,7 +74,7 @@ class ExtendReservationUseCase:
         )
 
     def extend(
-        self, request_dto: ExtendReservationRequestDTO
+        self, hotel_id: str, request_dto: ExtendReservationRequestDTO
     ) -> ExtendReservationResponseDTO:
         """
         Estende a reserva para nova data de check-out.
@@ -82,7 +82,7 @@ class ExtendReservationUseCase:
         Valida disponibilidade do quarto e chama reservation.extend_stay().
         """
         reservation = self.reservation_repository.find_by_phone_number(
-            request_dto.phone
+            request_dto.phone, hotel_id
         )
         if not reservation:
             return ExtendReservationResponseDTO(
@@ -102,7 +102,7 @@ class ExtendReservationUseCase:
                 success=False,
             )
 
-        room = self.room_repository.get_by_number(reservation.room_number)
+        room = self.room_repository.get_by_number(hotel_id, reservation.room_number)
         if not room:
             return ExtendReservationResponseDTO(
                 message="Quarto não encontrado.",
@@ -113,6 +113,7 @@ class ExtendReservationUseCase:
         check_in = reservation.stay_period.start
         new_checkout = request_dto.new_checkout
         if not self.room_repository.is_available(
+            hotel_id,
             reservation.room_number,
             check_in,
             new_checkout,
@@ -128,7 +129,7 @@ class ExtendReservationUseCase:
 
         try:
             reservation.extend_stay(new_checkout, room.daily_rate)
-            self.reservation_repository.save(reservation)
+            self.reservation_repository.save(reservation, hotel_id)
         except exceptions.InvalidExtendStayState as e:
             return ExtendReservationResponseDTO(
                 message=str(e),

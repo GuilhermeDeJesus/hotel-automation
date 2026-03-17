@@ -21,8 +21,12 @@ logs:
 ngrok-url:
 	curl -s http://localhost:4040/api/tunnels
 
+# Migrations e seed: rodam dentro do container (padrão Docker)
 migrate:
 	docker compose run --rm app alembic upgrade head
+
+seed:
+	docker compose run --rm app python scripts/seed_multi_tenant.py
 
 unit:
 	docker compose run --rm --build unit-tests sh -c "alembic upgrade head && python -m pytest tests/unit -q"

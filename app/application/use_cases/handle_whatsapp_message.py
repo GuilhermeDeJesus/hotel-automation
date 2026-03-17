@@ -109,31 +109,31 @@ class HandleWhatsAppMessageUseCase:
         self.support_ticket_use_case = support_ticket_use_case
         self.room_order_use_case = room_order_use_case
 
-    def execute(self, request_dto: WhatsAppMessageRequestDTO) -> WhatsAppMessageResponseDTO:
+    def execute(self, hotel_id: str, request_dto: WhatsAppMessageRequestDTO) -> WhatsAppMessageResponseDTO:
         text = (request_dto.message or "").strip()
         content_lower = text.lower()
         phone = request_dto.phone
 
-        flow_state = self._get_flow_state(phone)
+        flow_state = self._get_flow_state(f"{hotel_id}:{phone}")
         
         # Handle ongoing flows
         has_media = getattr(request_dto, "has_media", False)
         if flow_state and flow_state.get("action") == self.CREATE_RESERVATION_ACTION:
             return self._handle_create_reservation_flow(
-                phone, text, content_lower, flow_state, has_media=has_media
+                hotel_id, phone, text, content_lower, flow_state, has_media=has_media
             )
 
         if flow_state and flow_state.get("action") == self.CANCEL_RESERVATION_ACTION:
-            return self._handle_cancel_reservation_flow(phone, content_lower, flow_state)
+            return self._handle_cancel_reservation_flow(hotel_id, phone, content_lower, flow_state)
 
         if flow_state and flow_state.get("action") == self.CONFIRM_RESERVATION_ACTION:
-            return self._handle_confirm_reservation_flow(phone, text, content_lower, flow_state)
+            return self._handle_confirm_reservation_flow(hotel_id, phone, text, content_lower, flow_state)
 
         if flow_state and flow_state.get("action") == self.EXTEND_RESERVATION_ACTION:
-            return self._handle_extend_reservation_flow(phone, text, content_lower, flow_state)
+            return self._handle_extend_reservation_flow(hotel_id, phone, text, content_lower, flow_state)
 
         if flow_state and flow_state.get("action") == self.PRE_CHECKIN_ACTION:
-            return self._handle_pre_checkin_flow(phone, text, content_lower, flow_state)
+            return self._handle_pre_checkin_flow(hotel_id, phone, text, content_lower, flow_state)
 
         # 6.3 Fallback humano explícito
         if "atendente" in content_lower and len(content_lower.strip()) < 15:
@@ -148,20 +148,20 @@ class HandleWhatsAppMessageUseCase:
 
         # Check for new flow intentions
         if self._is_create_reservation_intent(content_lower):
-            return self._start_create_reservation_flow(phone)
+            return self._start_create_reservation_flow(hotel_id, phone)
 
         if self._is_cancel_reservation_intent(content_lower):
-            return self._start_cancel_reservation_flow(phone)
+            return self._start_cancel_reservation_flow(hotel_id, phone)
 
         if self._is_confirm_reservation_intent(content_lower):
-            return self._start_confirm_reservation_flow(phone)
+            return self._start_confirm_reservation_flow(hotel_id, phone)
 
         if self._is_extend_reservation_intent(content_lower):
-            return self._start_extend_reservation_flow(phone)
+            return self._start_extend_reservation_flow(hotel_id, phone)
 
         # 6.4 Chave digital - hóspede checked-in pede código
         if ("chave" in content_lower or "código" in content_lower or "codigo" in content_lower):
-            reservation = self.reservation_repository.find_by_phone_number(phone)
+            reservation = self.reservation_repository.find_by_phone_number(phone, hotel_id)
             if reservation and reservation.status.name == "CHECKED_IN" and getattr(reservation, "digital_key_code", None):
                 return WhatsAppMessageResponseDTO(
                     reply=f"🔑 Seu código de acesso: {reservation.digital_key_code}\n\nUse na fechadura do quarto.",
@@ -171,7 +171,7 @@ class HandleWhatsAppMessageUseCase:
         if "check-in" in content_lower or "checkin" in content_lower:
             try:
                 response_dto = self.checkin_use_case.execute(
-                    CheckinRequestDTO(phone=phone)
+                    hotel_id, CheckinRequestDTO(phone=phone)
                 )
                 return WhatsAppMessageResponseDTO(
                     reply=response_dto.message,
@@ -188,7 +188,7 @@ class HandleWhatsAppMessageUseCase:
         if self._is_checkout_intent(content_lower):
             try:
                 response_dto = self.checkout_use_case.execute(
-                    CheckoutRequestDTO(phone=phone)
+                    hotel_id, CheckoutRequestDTO(phone=phone)
                 )
                 return WhatsAppMessageResponseDTO(
                     reply=response_dto.message,
@@ -242,13 +242,13 @@ class HandleWhatsAppMessageUseCase:
                 error=str(exc),
             )
 
-    def _start_create_reservation_flow(self, phone: str) -> WhatsAppMessageResponseDTO:
+    def _start_create_reservation_flow(self, hotel_id: str, phone: str) -> WhatsAppMessageResponseDTO:
         """Initiate reservation creation flow."""
         flow_state = {
             "action": self.CREATE_RESERVATION_ACTION,
             "step": self.STEP_AWAITING_DATES,
         }
-        self._set_flow_state(phone, flow_state, ttl_seconds=900)
+        self._set_flow_state(f"{hotel_id}:{phone}", flow_state, ttl_seconds=900)
         return WhatsAppMessageResponseDTO(
             reply=(
                 "📅 Informe as datas da sua estadia.\n\n"
@@ -260,6 +260,7 @@ class HandleWhatsAppMessageUseCase:
 
     def _handle_create_reservation_flow(
         self,
+        hotel_id: str,
         phone: str,
         text: str,
         content_lower: str,
@@ -268,7 +269,7 @@ class HandleWhatsAppMessageUseCase:
     ) -> WhatsAppMessageResponseDTO:
         """Handle ongoing reservation creation flow."""
         if self._is_negative_confirmation(content_lower) or "cancelar" in content_lower:
-            self._clear_flow_state(phone)
+            self._clear_flow_state(f"{hotel_id}:{phone}")
             return WhatsAppMessageResponseDTO(
                 reply="❌ Reserva cancelada. Se precisar de algo mais, me avise.",
                 success=True,
@@ -277,20 +278,20 @@ class HandleWhatsAppMessageUseCase:
         step = flow_state.get("step", self.STEP_AWAITING_DATES)
 
         if step == self.STEP_AWAITING_DATES:
-            return self._handle_create_awaiting_dates(phone, text, flow_state)
+            return self._handle_create_awaiting_dates(hotel_id, phone, text, flow_state)
 
         if step == self.STEP_AWAITING_ROOM_CHOICE:
-            return self._handle_create_awaiting_room_choice(phone, content_lower, flow_state)
+            return self._handle_create_awaiting_room_choice(hotel_id, phone, content_lower, flow_state)
 
         if step == self.STEP_AWAITING_NAME:
-            return self._handle_create_awaiting_name(phone, text, flow_state)
+            return self._handle_create_awaiting_name(hotel_id, phone, text, flow_state)
 
         if step == self.STEP_AWAITING_PAYMENT_CHOICE:
-            return self._handle_create_awaiting_payment_choice(phone, content_lower, flow_state)
+            return self._handle_create_awaiting_payment_choice(hotel_id, phone, content_lower, flow_state)
 
         if step == self.STEP_AWAITING_PAYMENT_PROOF:
             return self._handle_create_awaiting_payment_proof(
-                phone, text, flow_state, has_media=has_media
+                hotel_id, phone, text, flow_state, has_media=has_media
             )
 
         return WhatsAppMessageResponseDTO(
@@ -319,7 +320,7 @@ class HandleWhatsAppMessageUseCase:
             return None, None
 
     def _handle_create_awaiting_dates(
-        self, phone: str, text: str, flow_state: dict
+        self, hotel_id: str, phone: str, text: str, flow_state: dict
     ) -> WhatsAppMessageResponseDTO:
         """Process dates input."""
         check_in, check_out = self._parse_dates_from_text(text)
@@ -346,7 +347,7 @@ class HandleWhatsAppMessageUseCase:
                 success=True,
             )
 
-        available = self.create_reservation_use_case.check_availability(check_in, check_out)
+        available = self.create_reservation_use_case.check_availability(hotel_id, check_in, check_out)
         if not available:
             return WhatsAppMessageResponseDTO(
                 reply="Desculpe, não há quartos disponíveis para este período. Tente outras datas.",
@@ -360,7 +361,7 @@ class HandleWhatsAppMessageUseCase:
             {"number": r.number, "room_type": r.room_type, "daily_rate": r.daily_rate}
             for r in available
         ]
-        self._set_flow_state(phone, flow_state, ttl_seconds=900)
+        self._set_flow_state(f"{hotel_id}:{phone}", flow_state, ttl_seconds=900)
 
         room_list = "\n".join(
             f"- {r.number} ({r.room_type}) - R$ {r.daily_rate:.2f}/noite"
@@ -372,7 +373,7 @@ class HandleWhatsAppMessageUseCase:
         )
 
     def _handle_create_awaiting_room_choice(
-        self, phone: str, content_lower: str, flow_state: dict
+        self, hotel_id: str, phone: str, content_lower: str, flow_state: dict
     ) -> WhatsAppMessageResponseDTO:
         """Process room selection."""
         rooms = flow_state.get("available_rooms", [])
@@ -392,7 +393,7 @@ class HandleWhatsAppMessageUseCase:
 
         flow_state["step"] = self.STEP_AWAITING_NAME
         flow_state["selected_room"] = selected
-        self._set_flow_state(phone, flow_state, ttl_seconds=900)
+        self._set_flow_state(f"{hotel_id}:{phone}", flow_state, ttl_seconds=900)
 
         return WhatsAppMessageResponseDTO(
             reply="Qual o nome do hóspede?",
@@ -400,7 +401,7 @@ class HandleWhatsAppMessageUseCase:
         )
 
     def _handle_create_awaiting_name(
-        self, phone: str, text: str, flow_state: dict
+        self, hotel_id: str, phone: str, text: str, flow_state: dict
     ) -> WhatsAppMessageResponseDTO:
         """Process guest name input, create reservation PENDING, and show payment choice."""
         name = text.strip()
@@ -418,13 +419,14 @@ class HandleWhatsAppMessageUseCase:
         )
 
         response = self.create_reservation_use_case.create(
+            hotel_id,
             CreateReservationRequestDTO(
                 phone=phone,
                 check_in=check_in,
                 check_out=check_out,
                 room_number=room_number,
                 guest_name=name,
-            )
+            ),
         )
 
         if not response.success:
@@ -458,13 +460,13 @@ class HandleWhatsAppMessageUseCase:
                 flow_state["guest_name"] = name
                 flow_state["reservation_id"] = response.reservation_id
                 flow_state["selected_room"] = room_number
-                self._set_flow_state(phone, flow_state, ttl_seconds=900)
+                self._set_flow_state(f"{hotel_id}:{phone}", flow_state, ttl_seconds=900)
                 summary_lines.append("")
                 summary_lines.append(
                     "📤 Envie seu comprovante de pagamento aqui para confirmarmos sua reserva."
                 )
             else:
-                self._clear_flow_state(phone)
+                self._clear_flow_state(f"{hotel_id}:{phone}")
             return WhatsAppMessageResponseDTO(
                 reply="\n".join(summary_lines),
                 success=True,
@@ -473,7 +475,7 @@ class HandleWhatsAppMessageUseCase:
         flow_state["step"] = self.STEP_AWAITING_PAYMENT_CHOICE
         flow_state["guest_name"] = name
         flow_state["reservation_id"] = response.reservation_id
-        self._set_flow_state(phone, flow_state, ttl_seconds=900)
+        self._set_flow_state(f"{hotel_id}:{phone}", flow_state, ttl_seconds=900)
 
         if allows_without:
             summary_lines.append("Como deseja prosseguir?")
@@ -489,11 +491,11 @@ class HandleWhatsAppMessageUseCase:
         )
 
     def _handle_create_awaiting_payment_choice(
-        self, phone: str, content_lower: str, flow_state: dict
+        self, hotel_id: str, phone: str, content_lower: str, flow_state: dict
     ) -> WhatsAppMessageResponseDTO:
         """Process payment choice (Passo 10 - Fase 0, conforme config do hotel)."""
         if self._is_negative_confirmation(content_lower) or "cancelar" in content_lower:
-            self._clear_flow_state(phone)
+            self._clear_flow_state(f"{hotel_id}:{phone}")
             return WhatsAppMessageResponseDTO(
                 reply="❌ Reserva cancelada. Se precisar de algo mais, me avise.",
                 success=True,
@@ -506,20 +508,20 @@ class HandleWhatsAppMessageUseCase:
             reservation_id = flow_state.get("reservation_id", "")
             guest_name = flow_state.get("guest_name", "Reserva")
             room_number = flow_state.get("selected_room", "")
-            reservation = self.reservation_repository.find_by_phone_number(phone)
+            reservation = self.reservation_repository.find_by_phone_number(phone, hotel_id)
             total = reservation.total_amount if reservation else 0.0
             payment_msg, is_manual = self._build_payment_message(
                 reservation_id, total, guest_name, room_number
             )
             if is_manual:
                 flow_state["step"] = self.STEP_AWAITING_PAYMENT_PROOF
-                self._set_flow_state(phone, flow_state, ttl_seconds=900)
+                self._set_flow_state(f"{hotel_id}:{phone}", flow_state, ttl_seconds=900)
                 return WhatsAppMessageResponseDTO(
                     reply=f"✅ Reserva criada!\n\n{payment_msg}\n\n"
                     "📤 Envie seu comprovante de pagamento aqui para confirmarmos sua reserva.",
                     success=True,
                 )
-            self._clear_flow_state(phone)
+            self._clear_flow_state(f"{hotel_id}:{phone}")
             return WhatsAppMessageResponseDTO(
                 reply=f"✅ Reserva criada!\n\n{payment_msg}",
                 success=True,
@@ -527,9 +529,9 @@ class HandleWhatsAppMessageUseCase:
 
         # Opção 2: Confirmar sem pagamento (só se hotel permite)
         if allows_without and self._is_confirm_without_payment_choice(content_lower):
-            self._clear_flow_state(phone)
+            self._clear_flow_state(f"{hotel_id}:{phone}")
             response = self.confirm_reservation_use_case.confirm(
-                ConfirmReservationRequestDTO(phone=phone)
+                hotel_id, ConfirmReservationRequestDTO(phone=phone)
             )
             return WhatsAppMessageResponseDTO(
                 reply=f"✅ {response.message}",
@@ -555,6 +557,7 @@ class HandleWhatsAppMessageUseCase:
 
     def _handle_create_awaiting_payment_proof(
         self,
+        hotel_id: str,
         phone: str,
         text: str,
         flow_state: dict,
@@ -576,7 +579,7 @@ class HandleWhatsAppMessageUseCase:
         content_lower = text.lower()
         if self._is_lateral_question(content_lower, has_media):
             try:
-                ai_reply = self.conversation_use_case.execute(phone, text)
+                ai_reply = self.conversation_use_case.execute(hotel_id, phone, text)
                 reminder = (
                     "\n\n---\n"
                     "💳 Quando estiver pronto, envie o comprovante de pagamento para confirmarmos sua reserva."
@@ -603,7 +606,7 @@ class HandleWhatsAppMessageUseCase:
                 success=False,
             )
 
-        reservation = self.reservation_repository.find_by_id(reservation_id)
+        reservation = self.reservation_repository.find_by_id(reservation_id, hotel_id)
         total = reservation.total_amount if reservation else 0.0
 
         payment_id = str(uuid.uuid4())
@@ -611,14 +614,15 @@ class HandleWhatsAppMessageUseCase:
         payment = Payment(
             payment_id=payment_id,
             reservation_id=reservation_id,
+            hotel_id=hotel_id,
             amount=total,
             status="PENDING",
             payment_method="manual",
             transaction_id=transaction_id,
         )
-        self.payment_repository.save(payment)
+        self.payment_repository.save(hotel_id, payment)
 
-        self._clear_flow_state(phone)
+        self._clear_flow_state(f"{hotel_id}:{phone}")
         return WhatsAppMessageResponseDTO(
             reply=(
                 "✅ Recebemos seu comprovante!\n\n"
@@ -718,14 +722,14 @@ class HandleWhatsAppMessageUseCase:
             "action": self.PRE_CHECKIN_ACTION,
             "step": self.STEP_AWAITING_DOCUMENT,
         }
-        self._set_flow_state(phone, flow_state, ttl_seconds=600)
+        self._set_flow_state(f"{hotel_id}:{phone}", flow_state, ttl_seconds=600)
         return WhatsAppMessageResponseDTO(
             reply="📋 Pré-check-in\n\nInforme seu CPF (apenas números):",
             success=True,
         )
 
     def _handle_pre_checkin_flow(
-        self, phone: str, text: str, content_lower: str, flow_state: dict
+        self, hotel_id: str, phone: str, text: str, content_lower: str, flow_state: dict
     ) -> WhatsAppMessageResponseDTO:
         step = flow_state.get("step", self.STEP_AWAITING_DOCUMENT)
         if step == self.STEP_AWAITING_DOCUMENT:
@@ -737,7 +741,7 @@ class HandleWhatsAppMessageUseCase:
                 )
             flow_state["guest_document"] = doc
             flow_state["step"] = self.STEP_AWAITING_ARRIVAL_TIME
-            self._set_flow_state(phone, flow_state, ttl_seconds=600)
+            self._set_flow_state(f"{hotel_id}:{phone}", flow_state, ttl_seconds=600)
             return WhatsAppMessageResponseDTO(
                 reply="Horário estimado de chegada? (ex: 14h, 15h30)",
                 success=True,
@@ -745,14 +749,14 @@ class HandleWhatsAppMessageUseCase:
         if step == self.STEP_AWAITING_ARRIVAL_TIME:
             from app.application.use_cases.pre_checkin import PreCheckInRequestDTO
             arrival = (text or "").strip() or None
-            resp = self.pre_checkin_use_case.execute(PreCheckInRequestDTO(
+            resp = self.pre_checkin_use_case.execute(hotel_id, PreCheckInRequestDTO(
                 phone=phone,
                 guest_document=flow_state.get("guest_document", ""),
                 estimated_arrival_time=arrival,
             ))
-            self._clear_flow_state(phone)
+            self._clear_flow_state(f"{hotel_id}:{phone}")
             return WhatsAppMessageResponseDTO(reply=resp.message, success=resp.success)
-        self._clear_flow_state(phone)
+        self._clear_flow_state(f"{hotel_id}:{phone}")
         return WhatsAppMessageResponseDTO(reply="Pré-check-in cancelado.", success=True)
 
     # --- 6.6 Resolução de problemas ---
@@ -767,18 +771,21 @@ class HandleWhatsAppMessageUseCase:
             ]
         )
 
-    def _handle_support_ticket(self, phone: str, text: str) -> WhatsAppMessageResponseDTO:
+    def _handle_support_ticket(self, hotel_id: str, phone: str, text: str) -> WhatsAppMessageResponseDTO:
         from app.application.use_cases.create_support_ticket import CreateSupportTicketRequestDTO
         category = "GENERAL"
         if "ar condicionado" in text.lower() or "ar-condicionado" in text.lower():
             category = "AR_CONDICIONADO"
         elif "vazamento" in text.lower():
             category = "VAZAMENTO"
-        resp = self.support_ticket_use_case.execute(CreateSupportTicketRequestDTO(
-            phone=phone,
-            description=text[:500],
-            category=category,
-        ))
+        resp = self.support_ticket_use_case.execute(
+            hotel_id,
+            CreateSupportTicketRequestDTO(
+                phone=phone,
+                description=text[:500],
+                category=category,
+            ),
+        )
         return WhatsAppMessageResponseDTO(reply=resp.message, success=resp.success)
 
     # --- 6.5 Pedidos durante estadia ---
@@ -789,7 +796,7 @@ class HandleWhatsAppMessageUseCase:
             for kw in ["room service", "cardápio", "cardapio", "pedido", "quero pedir"]
         )
 
-    def _handle_room_order(self, phone: str, content_lower: str) -> WhatsAppMessageResponseDTO:
+    def _handle_room_order(self, hotel_id: str, phone: str, content_lower: str) -> WhatsAppMessageResponseDTO:
         if "cardápio" in content_lower or "cardapio" in content_lower or "menu" in content_lower:
             from app.application.use_cases.room_order import RoomOrderUseCase
             return WhatsAppMessageResponseDTO(
@@ -820,7 +827,7 @@ class HandleWhatsAppMessageUseCase:
                 reply="Não entendi o pedido. Envie CARDÁPIO para ver opções.",
                 success=True,
             )
-        resp = self.room_order_use_case.execute(RoomOrderRequestDTO(phone=phone, items=items))
+        resp = self.room_order_use_case.execute(hotel_id, RoomOrderRequestDTO(phone=phone, items=items))
         return WhatsAppMessageResponseDTO(reply=resp.message, success=resp.success)
 
     @staticmethod

@@ -7,6 +7,7 @@ import {
   updateRoom,
   deleteRoom,
 } from "../api/client";
+import { useTenant } from "../contexts/TenantContext";
 import LoadingState from "../components/LoadingState";
 import ErrorState from "../components/ErrorState";
 import { useToast } from "../contexts/ToastContext";
@@ -114,6 +115,7 @@ function TextAreaField({
 }
 
 export default function HotelConfig() {
+  const { hotelId } = useTenant();
   const { data, error, isLoading, refetch } = useHotelConfig();
   const { data: rooms, error: roomsError, isLoading: roomsLoading, refetch: refetchRooms } = useRooms();
   const { showToast } = useToast();
@@ -160,7 +162,10 @@ export default function HotelConfig() {
     setSaveError(null);
     setSaving(true);
     try {
-      await updateHotelConfig({
+      if (!hotelId) {
+        throw new Error("Hotel não definido. Faça login novamente.");
+      }
+      await updateHotelConfig(hotelId, {
         name: form.name,
         address: form.address,
         contact_phone: form.contact_phone,
@@ -192,15 +197,18 @@ export default function HotelConfig() {
   }) => {
     setRoomSaving(true);
     try {
+      if (!hotelId) {
+        throw new Error("Hotel não definido. Faça login novamente.");
+      }
       if (editingRoom) {
-        await updateRoom(editingRoom.number, {
+        await updateRoom(hotelId, editingRoom.number, {
           room_type: formData.room_type,
           daily_rate: formData.daily_rate,
           max_guests: formData.max_guests,
         });
         showToast("Quarto atualizado com sucesso.", "success");
       } else {
-        await createRoom(formData);
+        await createRoom(hotelId, formData);
         showToast("Quarto criado com sucesso.", "success");
       }
       setRoomModalOpen(false);
@@ -218,7 +226,10 @@ export default function HotelConfig() {
       return;
     }
     try {
-      await deleteRoom(roomNumber);
+      if (!hotelId) {
+        throw new Error("Hotel não definido. Faça login novamente.");
+      }
+      await deleteRoom(hotelId, roomNumber);
       showToast("Quarto desativado.", "success");
       refetchRooms();
     } catch (e) {

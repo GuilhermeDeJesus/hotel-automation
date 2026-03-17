@@ -132,11 +132,13 @@ class GetSaaSDashboardUseCase:
 
     def get_leads(
         self,
+        hotel_id: str,
         start_date: date | None,
         end_date: date | None,
         status: str | None,
     ) -> list[dict[str, Any]]:
         params = {
+            "hotel_id": hotel_id,
             "start_date": start_date,
             "end_date": end_date,
             "status": status,
@@ -144,18 +146,24 @@ class GetSaaSDashboardUseCase:
         return self._get_cached_or_compute(
             operation="leads",
             params=params,
-            compute=lambda: self.saas_repository.list_leads(start_date, end_date, status),
+            compute=lambda: self.saas_repository.list_leads(hotel_id, start_date, end_date, status),
         )
 
-    def get_funnel(self, start_date: date | None, end_date: date | None) -> dict[str, Any]:
+    def get_funnel(
+        self,
+        hotel_id: str,
+        start_date: date | None,
+        end_date: date | None,
+    ) -> dict[str, Any]:
         params = {
+            "hotel_id": hotel_id,
             "start_date": start_date,
             "end_date": end_date,
         }
         return self._get_cached_or_compute(
             operation="funnel",
             params=params,
-            compute=lambda: self.saas_repository.get_funnel(start_date, end_date),
+            compute=lambda: self.saas_repository.get_funnel(hotel_id, start_date, end_date),
         )
 
     def get_timeseries(

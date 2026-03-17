@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Float, Date, ForeignKey, Text, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Float, Date, ForeignKey, Text, Boolean, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
@@ -21,10 +21,11 @@ class UserModel(Base):
 class RoomModel(Base):
     """Tabela de Quartos do Hotel"""
     __tablename__ = "rooms"
+    __table_args__ = (UniqueConstraint("hotel_id", "number", name="uq_rooms_hotel_number"),)
 
     id = Column(String, primary_key=True)
     hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
-    number = Column(String(10), nullable=False, unique=True, index=True)
+    number = Column(String(10), nullable=False, index=True)
     room_type = Column(String(50), nullable=False)  # SINGLE, DOUBLE, SUITE
     daily_rate = Column(Float, nullable=False)
     max_guests = Column(Integer, default=2)
@@ -37,13 +38,14 @@ class RoomModel(Base):
 class CustomerModel(Base):
     """Tabela de Clientes/Hóspedes"""
     __tablename__ = "customers"
+    __table_args__ = (UniqueConstraint("hotel_id", "document", name="uq_customers_hotel_document"),)
 
     id = Column(String, primary_key=True)
     hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
     name = Column(String(255), nullable=False, index=True)
     phone = Column(String(20), index=True)
     email = Column(String(255), index=True)
-    document = Column(String(20), unique=True)
+    document = Column(String(20), index=True)
     status = Column(String(20), default="ACTIVE", nullable=False)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
@@ -147,10 +149,11 @@ class HotelModel(Base):
 class ConversationCacheModel(Base):
     """Tabela de Cache de Conversas (WhatsApp)"""
     __tablename__ = "conversation_cache"
+    __table_args__ = (UniqueConstraint("hotel_id", "phone_number", name="uq_conversation_cache_hotel_phone"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
-    phone_number = Column(String(20), nullable=False, unique=True, index=True)
+    phone_number = Column(String(20), nullable=False, index=True)
     context_data = Column(Text)  # JSON string
     last_message = Column(Text)
     created_at = Column(DateTime, default=datetime.now, nullable=False)
@@ -160,10 +163,11 @@ class ConversationCacheModel(Base):
 class LeadModel(Base):
     """Tabela de leads SaaS para acompanhamento de funil."""
     __tablename__ = "saas_leads"
+    __table_args__ = (UniqueConstraint("hotel_id", "phone_number", name="uq_saas_leads_hotel_phone"),)
 
     id = Column(String, primary_key=True)
     hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
-    phone_number = Column(String(20), nullable=False, unique=True, index=True)
+    phone_number = Column(String(20), nullable=False, index=True)
     source = Column(String(20), nullable=False, index=True, default="unknown")
     stage = Column(String(40), nullable=False, index=True, default="NEW")
     message_count = Column(Integer, nullable=False, default=0)

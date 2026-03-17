@@ -21,7 +21,7 @@ class CheckInViaWhatsAppUseCase:
         self.reservation_repository = reservation_repository
         self.cache_repository = cache_repository
 
-    def execute(self, request_dto: CheckinRequestDTO) -> CheckinResponseDTO:
+    def execute(self, hotel_id: str, request_dto: CheckinRequestDTO) -> CheckinResponseDTO:
         phone = request_dto.phone_number
         cache_key = f"{self.CHECKIN_DONE_KEY_PREFIX}{phone}"
 
@@ -32,7 +32,7 @@ class CheckInViaWhatsAppUseCase:
             )
 
         # Busca reserva no repositório
-        reservation = self.reservation_repository.find_by_phone_number(phone)
+        reservation = self.reservation_repository.find_by_phone_number(phone, hotel_id)
         if not reservation:
             return CheckinResponseDTO(
                 message="Nenhuma reserva encontrada para esse numero."
@@ -41,7 +41,7 @@ class CheckInViaWhatsAppUseCase:
         # Executa check-in (domínio) e persiste
         try:
             reservation.check_in()
-            self.reservation_repository.save(reservation)
+            self.reservation_repository.save(reservation, hotel_id)
         except (exceptions.InvalidCheckInState, exceptions.InvalidCheckInDate) as e:
             return CheckinResponseDTO(
                 message=str(e),

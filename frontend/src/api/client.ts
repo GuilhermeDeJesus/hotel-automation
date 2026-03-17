@@ -1,5 +1,13 @@
 const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
 
+function getAuthHeaders(): Record<string, string> {
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+  const h: Record<string, string> = {};
+  if (token) h["Authorization"] = `Bearer ${token}`;
+  return h;
+}
+
 async function fetchApi<T>(
   path: string,
   params?: Record<string, string | undefined>,
@@ -15,7 +23,8 @@ async function fetchApi<T>(
   }
   const query = search.toString();
   const url = `${baseUrl}${path}${query ? `?${query}` : ""}`;
-  const res = await fetch(url, { headers: headers ?? {} });
+  const allHeaders = { ...getAuthHeaders(), ...(headers ?? {}) };
+  const res = await fetch(url, { headers: allHeaders });
   if (!res.ok) {
     throw new Error(`API error: ${res.status} ${res.statusText}`);
   }
@@ -34,59 +43,77 @@ export function setAdminToken(token: string): void {
   sessionStorage.setItem("saas_admin_token", token);
 }
 
-export async function fetchKpis(params?: {
+export async function fetchKpis(hotelId: string, params?: {
   from?: string;
   to?: string;
   source?: string;
   status?: string;
   granularity?: string;
 }) {
-  return fetchApi<import("../types/api").KpisResponse>("/saas/kpis", params);
+  // Backend usa usuário autenticado para filtrar por hotel; enviamos hotelId apenas como header informativo.
+  return fetchApi<import("../types/api").KpisResponse>("/saas/kpis", params, {
+    "X-Hotel-Id": hotelId,
+  });
 }
 
-export async function fetchLeads(params?: {
+export async function fetchHotelsList(): Promise<{ id: string; name: string }[]> {
+  // Backend retorna uma lista simples: [{ id, name }, ...]
+  return fetchApi<{ id: string; name: string }[]>("/dashboard/hotel/list");
+}
+
+export async function fetchLeads(hotelId: string, params?: {
   from?: string;
   to?: string;
   status?: string;
 }) {
-  return fetchApi<import("../types/api").LeadsResponse>("/saas/leads", params);
+  return fetchApi<import("../types/api").LeadsResponse>("/saas/leads", params, {
+    "X-Hotel-Id": hotelId,
+  });
 }
 
-export async function fetchFunnelJourney(params?: {
+export async function fetchFunnelJourney(hotelId: string, params?: {
   from?: string;
   to?: string;
 }) {
-  return fetchApi<import("../types/api").JourneyFunnelResponse>("/saas/funnel/journey", params);
+  return fetchApi<import("../types/api").JourneyFunnelResponse>("/saas/funnel/journey", params, {
+    "X-Hotel-Id": hotelId,
+  });
 }
 
-export async function fetchFunnel(params?: {
+export async function fetchFunnel(hotelId: string, params?: {
   from?: string;
   to?: string;
 }) {
-  return fetchApi<import("../types/api").FunnelResponse>("/saas/funnel", params);
+  return fetchApi<import("../types/api").FunnelResponse>("/saas/funnel", params, {
+    "X-Hotel-Id": hotelId,
+  });
 }
 
-export async function fetchTimeseries(params?: {
+export async function fetchTimeseries(hotelId: string, params?: {
   from?: string;
   to?: string;
   source?: string;
   status?: string;
   granularity?: string;
 }) {
-  return fetchApi<import("../types/api").TimeseriesResponse>("/saas/timeseries", params);
+  return fetchApi<import("../types/api").TimeseriesResponse>("/saas/timeseries", params, {
+    "X-Hotel-Id": hotelId,
+  });
 }
 
-export async function fetchKpisCompare(params?: {
+export async function fetchKpisCompare(hotelId: string, params?: {
   from?: string;
   to?: string;
   source?: string;
   status?: string;
   granularity?: string;
 }) {
-  return fetchApi<import("../types/api").KpisCompareResponse>("/saas/kpis/compare", params);
+  return fetchApi<import("../types/api").KpisCompareResponse>("/saas/kpis/compare", params, {
+    "X-Hotel-Id": hotelId,
+  });
 }
 
-export async function fetchReservations(params?: {
+export async function fetchReservations(hotelId: string, params?: {
   from?: string;
   to?: string;
   status?: string;
@@ -101,13 +128,19 @@ export async function fetchReservations(params?: {
     if (params.room_number) p.room_number = params.room_number;
     if (params.limit) p.limit = String(params.limit);
   }
-  return fetchApi<import("../types/api").ReservationsResponse>("/saas/reservations", p);
+  return fetchApi<import("../types/api").ReservationsResponse>("/saas/reservations", p, {
+    "X-Hotel-Id": hotelId,
+  });
 }
 
-export async function markReservationNoShow(reservationId: string) {
+export async function markReservationNoShow(hotelId: string, reservationId: string) {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
   const res = await fetch(`${baseUrl}/saas/reservations/${reservationId}/mark-no-show`, {
     method: "POST",
+    headers: {
+      ...getAuthHeaders(),
+      "X-Hotel-Id": hotelId,
+    },
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -116,7 +149,7 @@ export async function markReservationNoShow(reservationId: string) {
   return res.json();
 }
 
-export async function fetchPayments(params?: {
+export async function fetchPayments(hotelId: string, params?: {
   reservation_id?: string;
   status?: string;
   limit?: number;
@@ -127,11 +160,15 @@ export async function fetchPayments(params?: {
     if (params.status) p.status = params.status;
     if (params.limit) p.limit = String(params.limit);
   }
-  return fetchApi<import("../types/api").PaymentsResponse>("/saas/payments", p);
+  return fetchApi<import("../types/api").PaymentsResponse>("/saas/payments", p, {
+    "X-Hotel-Id": hotelId,
+  });
 }
 
-export async function fetchHotelConfig() {
-  return fetchApi<import("../types/api").HotelConfig>("/saas/hotel/config");
+export async function fetchHotelConfig(hotelId: string) {
+  return fetchApi<import("../types/api").HotelConfig>("/saas/hotel/config", undefined, {
+    "X-Hotel-Id": hotelId,
+  });
 }
 
 export async function fetchAuditEvents(params?: {
@@ -158,11 +195,13 @@ export async function fetchAuditEvents(params?: {
   });
 }
 
-export async function fetchRooms() {
-  return fetchApi<{ items: import("../types/api").Room[] }>("/saas/rooms");
+export async function fetchRooms(hotelId: string) {
+  return fetchApi<{ items: import("../types/api").Room[] }>("/saas/rooms", undefined, {
+    "X-Hotel-Id": hotelId,
+  });
 }
 
-export async function createRoom(payload: {
+export async function createRoom(hotelId: string, payload: {
   number: string;
   room_type: string;
   daily_rate: number;
@@ -171,7 +210,7 @@ export async function createRoom(payload: {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
   const res = await fetch(`${baseUrl}/saas/rooms`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders(), "X-Hotel-Id": hotelId },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -182,13 +221,14 @@ export async function createRoom(payload: {
 }
 
 export async function updateRoom(
+  hotelId: string,
   roomNumber: string,
   payload: { room_type?: string; daily_rate?: number; max_guests?: number; status?: string }
 ) {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
   const res = await fetch(`${baseUrl}/saas/rooms/${encodeURIComponent(roomNumber)}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders(), "X-Hotel-Id": hotelId },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -198,10 +238,11 @@ export async function updateRoom(
   return res.json();
 }
 
-export async function deleteRoom(roomNumber: string) {
+export async function deleteRoom(hotelId: string, roomNumber: string) {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
   const res = await fetch(`${baseUrl}/saas/rooms/${encodeURIComponent(roomNumber)}`, {
     method: "DELETE",
+    headers: { ...getAuthHeaders(), "X-Hotel-Id": hotelId },
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -210,7 +251,7 @@ export async function deleteRoom(roomNumber: string) {
   return res.json();
 }
 
-export async function updateHotelConfig(payload: {
+export async function updateHotelConfig(hotelId: string, payload: {
   name?: string;
   address?: string;
   contact_phone?: string;
@@ -226,7 +267,7 @@ export async function updateHotelConfig(payload: {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
   const res = await fetch(`${baseUrl}/saas/hotel/config`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...getAuthHeaders(), "X-Hotel-Id": hotelId },
     body: JSON.stringify(payload),
   });
   if (!res.ok) {
@@ -261,7 +302,7 @@ export async function confirmPaymentManual(paymentId: string, transactionId?: st
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
   const url = new URL(`${baseUrl}/saas/payments/${paymentId}/confirm`);
   if (transactionId) url.searchParams.set("transaction_id", transactionId);
-  const res = await fetch(url.toString(), { method: "POST" });
+  const res = await fetch(url.toString(), { method: "POST", headers: getAuthHeaders() });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.detail || `API error: ${res.status} ${res.statusText}`);

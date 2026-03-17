@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchKpis } from "../api/client";
+import { useTenant } from "../contexts/TenantContext";
 import type { KpisResponse, DashboardFilters } from "../types/api";
 
 interface UseKpisResult {
@@ -14,10 +15,18 @@ export function useKpis(filters?: DashboardFilters): UseKpisResult {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const { hotelId } = useTenant();
+
   const load = () => {
+    if (!hotelId) {
+      setError("Hotel não definido. Faça login novamente.");
+      setData(null);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError(null);
-    fetchKpis({
+    fetchKpis(hotelId, {
       from: filters?.from,
       to: filters?.to,
       source: filters?.source || undefined,
@@ -31,7 +40,8 @@ export function useKpis(filters?: DashboardFilters): UseKpisResult {
 
   useEffect(() => {
     load();
-  }, [filters?.from, filters?.to, filters?.source, filters?.status]);
+    // Recarrega quando filtros OU hotelId mudam (ex.: superadmin seleciona hotel)
+  }, [hotelId, filters?.from, filters?.to, filters?.source, filters?.status]);
 
   return { data, error, isLoading, refetch: load };
 }

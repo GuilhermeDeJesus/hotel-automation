@@ -10,8 +10,13 @@ from app.interfaces.dependencies.auth import get_current_user
 from app.infrastructure.persistence.sql.models import UserModel
 from app.infrastructure.persistence.sql.database import SessionLocal
 from app.infrastructure.persistence.sql.models import (
-    ReservationModel, RoomModel, CustomerModel, PaymentModel, 
-    SupportTicketModel, RoomOrderModel, HotelModel
+    ReservationModel,
+    RoomModel,
+    CustomerModel,
+    PaymentModel,
+    SupportTicketModel,
+    RoomOrderModel,
+    HotelModel,
 )
 
 
@@ -80,6 +85,33 @@ class CustomerAnalytics(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class HotelSummary(BaseModel):
+    id: str
+    name: str
+
+
+@router.get("/list", response_model=list[HotelSummary])
+def list_hotels(current_user: UserModel = Depends(get_current_user)):
+    """
+    Lista hotéis disponíveis para o painel.
+
+    - Para super admin (role=admin e hotel_id=None): retorna todos os hotéis ativos.
+    - Para usuários com hotel associado: retorna apenas o próprio hotel.
+    """
+    session = SessionLocal()
+    try:
+        query = session.query(HotelModel).filter_by(is_active=True)
+
+        # Usuário com hotel vinculado só enxerga o próprio hotel
+        if current_user.hotel_id:
+            query = query.filter(HotelModel.id == current_user.hotel_id)
+
+        hotels = query.order_by(HotelModel.name.asc()).all()
+        return [HotelSummary(id=h.id, name=h.name) for h in hotels]
+    finally:
+        session.close()
 
 
 @router.get("/{hotel_id}/stats", response_model=DashboardStatsResponse)

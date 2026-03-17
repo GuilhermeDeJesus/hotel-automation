@@ -19,6 +19,7 @@ class PaymentRepositorySQL(PaymentRepository):
         return Payment(
             payment_id=str(model.id),
             reservation_id=str(model.reservation_id),
+            hotel_id=str(model.hotel_id),
             amount=float(model.amount),
             status=model.status,
             payment_method=model.payment_method,
@@ -97,3 +98,14 @@ class PaymentRepositorySQL(PaymentRepository):
             .all()
         )
         return [self._to_domain(m) for m in models]
+
+    def find_by_id_global(self, payment_id: str) -> Optional[Payment]:
+        """Busca pagamento apenas por ID, sem filtro de hotel (uso especial em webhooks)."""
+        model = (
+            self.session.query(PaymentModel)
+            .filter_by(id=str(payment_id))
+            .first()
+        )
+        if not model:
+            return None
+        return self._to_domain(model)

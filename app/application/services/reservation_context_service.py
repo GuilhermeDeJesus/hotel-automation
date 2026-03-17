@@ -26,7 +26,7 @@ class ReservationContextService:
         """
         self.reservation_repo = reservation_repo
     
-    def get_context_for_phone(self, phone_number: str) -> str:
+    def get_context_for_phone(self, hotel_id: str, phone_number: str) -> str:
         """
         Retrieve and format reservation context for a phone number.
         
@@ -40,7 +40,7 @@ class ReservationContextService:
             Formatted reservation context string, or empty string if no active reservation
         """
         try:
-            reservation = self.reservation_repo.find_by_phone_number(phone_number)
+            reservation = self.reservation_repo.find_by_phone_number(phone_number, hotel_id)
             if not reservation:
                 return ""
             

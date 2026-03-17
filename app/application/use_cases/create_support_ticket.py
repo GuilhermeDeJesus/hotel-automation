@@ -36,8 +36,8 @@ class CreateSupportTicketUseCase:
         self.reservation_repository = reservation_repository
         self.ticket_repository = ticket_repository
 
-    def execute(self, request: CreateSupportTicketRequestDTO) -> CreateSupportTicketResponseDTO:
-        reservation = self.reservation_repository.find_by_phone_number(request.phone)
+    def execute(self, hotel_id: str, request: CreateSupportTicketRequestDTO) -> CreateSupportTicketResponseDTO:
+        reservation = self.reservation_repository.find_by_phone_number(request.phone, hotel_id)
         if not reservation:
             return CreateSupportTicketResponseDTO(
                 success=False,
@@ -52,6 +52,7 @@ class CreateSupportTicketUseCase:
 
         ticket_id = str(uuid.uuid4())[:8]
         self.ticket_repository.save(
+            hotel_id=hotel_id,
             ticket_id=ticket_id,
             reservation_id=reservation.id,
             description=request.description,

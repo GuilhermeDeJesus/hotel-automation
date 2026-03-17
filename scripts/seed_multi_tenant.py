@@ -1,12 +1,21 @@
-"""Seed multi-tenant data for development/testing."""
+"""Seed multi-tenant data for development/testing. Padrão: Docker."""
 import uuid
 import os
 import sys
+from pathlib import Path
 from datetime import datetime
 from passlib.hash import bcrypt
 
 # Adicionar diretório raiz ao PYTHONPATH
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
+
+# Carrega .env (DATABASE_URL para Docker)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(PROJECT_ROOT / ".env")
+except ImportError:
+    pass
 
 from app.infrastructure.persistence.sql.database import SessionLocal, init_db
 from app.infrastructure.persistence.sql.models import (
@@ -98,6 +107,9 @@ def seed_multi_tenant_data() -> None:
             created_hotels.append(hotel_data)
             print(f"  ⏭️  Hotel já existe: {hotel_data['name']}")
     
+    # Commit hotéis antes de criar dependências (FK)
+    session.commit()
+
     # 2. Criar quartos para cada hotel
     rooms_by_hotel = {
         "hotel-paradise-001": [
@@ -151,6 +163,9 @@ def seed_multi_tenant_data() -> None:
         hotel_name = next(h["name"] for h in hotels_data if h["id"] == hotel_id)
         print(f"  ✅ Quartos criados para {hotel_name}: {len(rooms_data)} quartos")
     
+    # Commit quartos antes de criar usuários
+    session.commit()
+
     # 3. Criar usuários associados a hotéis específicos
     users_data = [
         # Hotel Paradise
@@ -262,7 +277,10 @@ def seed_multi_tenant_data() -> None:
             print(f"  ✅ Usuário criado: {user_data['name']} ({user_data['role']}) - {hotel_name}")
         else:
             print(f"  ⏭️  Usuário já existe: {user_data['email']}")
-    
+
+    # Commit usuários antes de criar clientes
+    session.commit()
+
     # 4. Criar clientes de exemplo para cada hotel
     customers_by_hotel = {
         "hotel-paradise-001": [

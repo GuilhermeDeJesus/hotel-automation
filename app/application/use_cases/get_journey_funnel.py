@@ -20,6 +20,7 @@ class GetJourneyFunnelUseCase:
 
     def execute(
         self,
+        hotel_id: str,
         from_date: Optional[date] = None,
         to_date: Optional[date] = None,
     ) -> dict[str, Any]:
@@ -27,10 +28,10 @@ class GetJourneyFunnelUseCase:
         Return journey funnel stages: Lead, Reserva, Confirmada, Check-in, Check-out.
         Leads come from saas_repository; reservation counts from reservation_repository.
         """
-        lead_funnel = self.saas_repository.get_funnel(from_date, to_date)
+        lead_funnel = self.saas_repository.get_funnel(hotel_id, from_date, to_date)
         leads_total = lead_funnel.get("total", 0)
 
-        res_counts = self.reservation_repository.count_by_status(from_date, to_date)
+        res_counts = self.reservation_repository.count_by_status(hotel_id, from_date, to_date)
         pending = res_counts.get("PENDING", 0)
         confirmed = res_counts.get("CONFIRMED", 0)
         checked_in = res_counts.get("CHECKED_IN", 0)

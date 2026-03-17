@@ -13,10 +13,14 @@ import {
   IconMenu,
   IconSun,
   IconMoon,
+  IconMessage,
 } from "./Icons";
-import { getAdminToken, invalidateCache } from "../api/client";
+import { getAdminToken, invalidateCache, fetchHotelsList } from "../api/client";
 import { useToast } from "../contexts/ToastContext";
 import { useTheme } from "../contexts/ThemeContext";
+import { useTenant } from "../contexts/TenantContext";
+import { useHotelConfig } from "../api/hotelConfig";
+import { logoutUser } from "../api/authUtils";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -31,6 +35,10 @@ export default function Layout({ children }: LayoutProps) {
   const [isMobile, setIsMobile] = useState(false);
   const { showToast } = useToast();
   const { theme, toggleTheme } = useTheme();
+  const { hotelId, role, setHotelId } = useTenant();
+  const { config: hotelConfig } = useHotelConfig(hotelId);
+  const [hotels, setHotels] = useState<{ id: string; name: string }[]>([]);
+  const [loadingHotels, setLoadingHotels] = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
@@ -42,6 +50,20 @@ export default function Layout({ children }: LayoutProps) {
   useEffect(() => {
     if (!isMobile) setSidebarOpen(false);
   }, [isMobile, location.pathname]);
+
+  // Carrega lista de hotéis para super admin (role=admin e sem hotelId no token)
+  useEffect(() => {
+    const isSuperAdmin = role === "admin";
+    if (!isSuperAdmin) return;
+    if (hotels.length > 0) return;
+    setLoadingHotels(true);
+    fetchHotelsList()
+      .then((items) => setHotels(items))
+      .catch((e) => {
+        console.error("Erro ao carregar hotéis:", e);
+      })
+      .finally(() => setLoadingHotels(false));
+  }, [role, hotels.length]);
 
   const handleInvalidateCache = async () => {
     if (!getAdminToken()) {
@@ -61,13 +83,14 @@ export default function Layout({ children }: LayoutProps) {
   };
 
   const navItems = [
-    { path: "/", label: "Overview", icon: IconOverview },
+    { path: "/dashboard", label: "Overview", icon: IconOverview },
     { path: "/leads", label: "Leads", icon: IconLeads },
     { path: "/funnel", label: "Funil de conversão", icon: IconFunnel },
     { path: "/timeseries", label: "Evolução temporal", icon: IconChart },
     { path: "/reservations", label: "Reservas", icon: IconCalendar },
     { path: "/payments", label: "Pagamentos", icon: IconCreditCard },
     { path: "/hotel-config", label: "Config. hotel", icon: IconSettings },
+    { path: "/whatsapp-config", label: "WhatsApp (IA)", icon: IconMessage },
     { path: "/admin/audit", label: "Auditoria", icon: IconAudit },
   ];
 
@@ -103,6 +126,8 @@ export default function Layout({ children }: LayoutProps) {
           zIndex: 50,
           transform: isMobile && !sidebarOpen ? "translateX(-100%)" : "translateX(0)",
           transition: "transform 0.2s ease",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         <div style={{ padding: "0 1.25rem", marginBottom: "2rem" }}>
@@ -133,7 +158,13 @@ export default function Layout({ children }: LayoutProps) {
             </div>
           </div>
         </div>
-        <nav>
+        <nav
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            paddingBottom: "1rem",
+          }}
+        >
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
@@ -207,9 +238,48 @@ export default function Layout({ children }: LayoutProps) {
                   <IconMenu />
                 </button>
               )}
-              <span style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
-                Bem-vindo ao painel de gestão
-              </span>
+              {role === "admin" && hotels.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                  <div style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>Selecionar hotel</div>
+                  <select
+                    value={hotelId || ""}
+                    onChange={(e) => {
+                      const value = e.target.value || null;
+                      setHotelId(value);
+                    }}
+                    style={{
+                      minWidth: 200,
+                      padding: "0.25rem 0.5rem",
+                      borderRadius: "var(--radius-sm)",
+                      border: "1px solid var(--color-border)",
+                      background: "var(--color-bg)",
+                      color: "var(--color-text)",
+                      fontSize: "0.875rem",
+                    }}
+                  >
+                    <option value="">{loadingHotels ? "Carregando hotéis..." : "Escolha um hotel"}</option>
+                    {hotels.map((h) => (
+                      <option key={h.id} value={h.id}>
+                        {h.name}
+                      </option>
+                    ))}
+                  </select>
+                  {hotelId && (
+                    <div style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+                      Hotel ID: {hotelId}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: "0.9375rem", fontWeight: 600 }}>
+                    {hotelConfig?.hotel_name ?? "Painel de gestão"}
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>
+                    {hotelId ? `Hotel ID: ${hotelId}` : "Bem-vindo ao painel de gestão"}
+                  </div>
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <button
@@ -250,6 +320,22 @@ export default function Layout({ children }: LayoutProps) {
               >
                 <IconRefresh />
                 {cacheLoading ? "Atualizando..." : "Atualizar dados"}
+              </button>
+              <button
+                type="button"
+                onClick={logoutUser}
+                style={{
+                  padding: "0.5rem 0.875rem",
+                  fontSize: "0.8125rem",
+                  fontWeight: 500,
+                  color: "var(--color-error)",
+                  background: "transparent",
+                  border: "1px solid var(--color-error)",
+                  borderRadius: "var(--radius-sm)",
+                  cursor: "pointer",
+                }}
+              >
+                Sair
               </button>
             </div>
           </div>

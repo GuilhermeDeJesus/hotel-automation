@@ -175,7 +175,7 @@ def _build_use_case_standalone():
 
 def _build_use_case_with_deps():
     """Constrói HandleWhatsAppMessageUseCase com dependências reais (Redis, Postgres)."""
-    from app.interfaces.dependencies import get_whatsapp_message_use_case
+    from app.interfaces.di_whatsapp import get_whatsapp_message_use_case
     from app.application.use_cases.handle_whatsapp_message import HandleWhatsAppMessageUseCase
     from app.infrastructure.cache.redis_repository import RedisRepository
 

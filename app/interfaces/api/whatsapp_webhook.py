@@ -8,12 +8,13 @@ from dotenv import load_dotenv
 from app.application.use_cases.handle_whatsapp_message import HandleWhatsAppMessageUseCase
 from app.application.use_cases.get_saas_dashboard import GetSaaSDashboardUseCase
 from app.application.dto.whatsapp_message_request_dto import WhatsAppMessageRequestDTO
-from app.interfaces.dependencies import get_whatsapp_message_use_case
+from app.interfaces.di_whatsapp import get_whatsapp_message_use_case
 from app.infrastructure.messaging.whatsapp_meta_client import WhatsAppMetaClient
 from app.infrastructure.messaging.whatsapp_twilio_client import WhatsAppTwilioClient
 from app.infrastructure.cache.redis_repository import RedisRepository
 from app.infrastructure.persistence.sql.database import SessionLocal
 from app.infrastructure.persistence.sql.saas_repository_sql import SaaSRepositorySQL
+from app.infrastructure.persistence.sql.hotel_config_models import HotelConfigModel
 
 load_dotenv()
 
@@ -27,6 +28,28 @@ def _normalize_phone(phone: str) -> str:
     return "".join(ch for ch in phone if ch.isdigit())
 
 
+def _resolve_hotel_id_from_whatsapp_to(to_phone: str, session) -> str | None:
+    """
+    Resolve hotel_id a partir do número de WhatsApp configurado no hotel.
+
+    Normaliza o número e busca em HotelConfigModel.whatsapp_number.
+    """
+    normalized = _normalize_phone(to_phone)
+    if not normalized:
+        return None
+
+    config = (
+        session.query(HotelConfigModel)
+        .filter(HotelConfigModel.whatsapp_number.isnot(None))
+        .filter(HotelConfigModel.whatsapp_number != "")
+        .filter(HotelConfigModel.whatsapp_number.contains(normalized))
+        .first()
+    )
+    if not config:
+        return None
+    return config.hotel_id
+
+
 def _track_saas(
     phone: str,
     source: str,
@@ -34,6 +57,7 @@ def _track_saas(
     success: bool = True,
     response_time_ms: int | None = None,
     details: dict | None = None,
+    hotel_id: str | None = None,
 ) -> None:
     if not phone:
         return
@@ -42,10 +66,12 @@ def _track_saas(
     should_invalidate_cache = False
     try:
         repo = SaaSRepositorySQL(session)
-        if event_type == "inbound_message":
-            repo.touch_lead(phone=phone, source=source, stage="NEW")
-        elif event_type == "outbound_message":
-            repo.touch_lead(phone=phone, source=source, stage="ENGAGED")
+        # hotel_id é obrigatório para leads; se não vier, só registra evento
+        if hotel_id:
+            if event_type == "inbound_message":
+                repo.touch_lead(hotel_id=hotel_id, phone=phone, source=source, stage="NEW")
+            elif event_type == "outbound_message":
+                repo.touch_lead(hotel_id=hotel_id, phone=phone, source=source, stage="ENGAGED")
 
         repo.track_event(
             phone=phone,
@@ -55,8 +81,9 @@ def _track_saas(
             response_time_ms=response_time_ms,
             details=details,
         )
-        repo.sync_lead_stage_from_reservation(phone)
-        should_invalidate_cache = True
+        if hotel_id:
+            repo.sync_lead_stage_from_reservation(phone)
+            should_invalidate_cache = True
     except Exception as exc:
         logger.warning(f"⚠️ Falha ao registrar evento SaaS: {exc}")
     finally:
@@ -117,7 +144,7 @@ async def verify_webhook(request: Request):
 @router.post("/webhook/whatsapp")
 async def receive_whatsapp_message(
     request: Request,
-    use_case: HandleWhatsAppMessageUseCase = Depends(get_whatsapp_message_use_case)
+    use_case: HandleWhatsAppMessageUseCase = Depends(get_whatsapp_message_use_case),
 ):
     """
     Recebe mensagens do WhatsApp via Meta Cloud API.
@@ -132,20 +159,31 @@ async def receive_whatsapp_message(
             logger.warning(f"⚠️  Objeto ignorado: {body.get('object')}")
             return {"status": "ignored"}
         
-        # Processa cada entrada
-        for entry in body.get("entry", []):
-            for change in entry.get("changes", []):
-                value = change.get("value", {})
-                
-                # Processa mensagens recebidas
-                messages = value.get("messages", [])
-                for message in messages:
-                    await _handle_incoming_message(message, use_case)
-                
-                # Processa status de entrega
-                statuses = value.get("statuses", [])
-                for status in statuses:
-                    _handle_message_status(status)
+        session = SessionLocal()
+        try:
+            # Resolve hotel_id a partir do número de destino (Meta: metadata.phone_number_id ou value.metadata)
+            hotel_id: str | None = None
+
+            # Meta normalmente fornece phone_number_id em value.metadata
+            entry_list = body.get("entry", [])
+            for entry in entry_list:
+                for change in entry.get("changes", []):
+                    value = change.get("value", {})
+                    metadata = value.get("metadata", {})
+                    to_phone_raw = metadata.get("display_phone_number") or metadata.get("phone_number_id") or ""
+                    if to_phone_raw and not hotel_id:
+                        hotel_id = _resolve_hotel_id_from_whatsapp_to(to_phone_raw, session)
+
+                    # Processa mensagens recebidas
+                    messages = value.get("messages", [])
+                    for message in messages:
+                        await _handle_incoming_message(message, use_case, hotel_id)
+                    # Processa status de entrega
+                    statuses = value.get("statuses", [])
+                    for status in statuses:
+                        _handle_message_status(status)
+        finally:
+            session.close()
         
         return {"status": "ok"}
     
@@ -161,7 +199,7 @@ async def receive_whatsapp_message(
 @router.post("/webhook/whatsapp/twilio")
 async def receive_twilio_whatsapp_message(
     request: Request,
-    use_case: HandleWhatsAppMessageUseCase = Depends(get_whatsapp_message_use_case)
+    use_case: HandleWhatsAppMessageUseCase = Depends(get_whatsapp_message_use_case),
 ):
     """
     Recebe mensagens do WhatsApp via Twilio API.
@@ -178,6 +216,7 @@ async def receive_twilio_whatsapp_message(
         # Extrai dados da mensagem
         from_phone_raw = form_data.get("From", "").replace("whatsapp:", "")
         from_phone = _normalize_phone(from_phone_raw)
+        to_phone_raw = form_data.get("To", "").replace("whatsapp:", "")
         message_body = form_data.get("Body", "")
         message_sid = form_data.get("MessageSid", "")
         num_media = int(form_data.get("NumMedia", 0))
@@ -189,11 +228,19 @@ async def receive_twilio_whatsapp_message(
             media_url = form_data.get("MediaUrl0", "")
             logger.info(f"📎 [TWILIO] Mídia: {media_url}")
 
+        # Resolve hotel_id a partir do número de destino Twilio (To)
+        session = SessionLocal()
+        try:
+            hotel_id = _resolve_hotel_id_from_whatsapp_to(to_phone_raw, session)
+        finally:
+            session.close()
+
         _track_saas(
             phone=from_phone,
             source="twilio",
             event_type="inbound_message",
             details={"message_sid": message_sid},
+            hotel_id=hotel_id,
         )
         
         # Processa a mensagem e gera resposta
@@ -201,7 +248,8 @@ async def receive_twilio_whatsapp_message(
         has_media = num_media > 0
         started_at = time.perf_counter()
         response_dto = use_case.execute(
-            WhatsAppMessageRequestDTO(
+            hotel_id=hotel_id,
+            request_dto=WhatsAppMessageRequestDTO(
                 phone=from_phone,
                 message=message_body,
                 source="twilio",
@@ -225,6 +273,7 @@ async def receive_twilio_whatsapp_message(
             success=bool(result.get("success")),
             response_time_ms=elapsed_ms,
             details={"message_sid": message_sid},
+            hotel_id=hotel_id,
         )
         
         # Twilio precisa de status 200 para confirmar
@@ -236,7 +285,11 @@ async def receive_twilio_whatsapp_message(
 
 
 # ==================== MESSAGE HANDLERS ====================
-async def _handle_incoming_message(message: dict, use_case: HandleWhatsAppMessageUseCase):
+async def _handle_incoming_message(
+    message: dict,
+    use_case: HandleWhatsAppMessageUseCase,
+    hotel_id: str | None,
+):
     """
     Processa mensagem recebida do WhatsApp.
     
@@ -282,7 +335,8 @@ async def _handle_incoming_message(message: dict, use_case: HandleWhatsAppMessag
 
         started_at = time.perf_counter()
         response_dto = use_case.execute(
-            WhatsAppMessageRequestDTO(
+            hotel_id=hotel_id,
+            request_dto=WhatsAppMessageRequestDTO(
                 phone=from_phone,
                 message=content,
                 source="meta",

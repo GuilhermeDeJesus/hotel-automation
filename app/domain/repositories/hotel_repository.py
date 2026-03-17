@@ -6,8 +6,8 @@ from app.domain.entities.hotel.hotel import Hotel
 
 class HotelRepository(ABC):
     @abstractmethod
-    def get_active_hotel(self, hotel_id: str) -> Optional[Hotel]:
-        """Return the active hotel record for a hotel_id or None."""
+    def get_active_hotel(self, hotel_id: str | None = None) -> Optional[Hotel]:
+        """Return the active hotel record for hotel_id, or first active hotel if hotel_id is None."""
         pass
 
     @abstractmethod

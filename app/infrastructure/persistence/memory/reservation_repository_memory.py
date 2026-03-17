@@ -11,27 +11,35 @@ class ReservationRepositoryMemory(ReservationRepository):
     def __init__(self):
         self._reservations: dict[str, Reservation] = {}
 
-    def find_by_id(self, reservation_id: str) -> Optional[Reservation]:
-        return self._reservations.get(reservation_id)
+    def find_by_id(self, reservation_id: str, hotel_id: str) -> Optional[Reservation]:
+        r = self._reservations.get(reservation_id)
+        if r and getattr(r, "hotel_id", None) == hotel_id:
+            return r
+        return None
 
-    def find_confirmed_past_checkin_date(self, reference_date: date) -> List[Reservation]:
+    def find_confirmed_past_checkin_date(self, reference_date: date, hotel_id: str) -> List[Reservation]:
         """Return CONFIRMED reservations with check_in_date < reference_date."""
         result = []
         for r in self._reservations.values():
+            if getattr(r, "hotel_id", None) != hotel_id:
+                continue
             if r.status != ReservationStatus.CONFIRMED:
                 continue
             if r.stay_period and r.stay_period.start < reference_date:
                 result.append(r)
         return result
 
-    def find_by_phone_number(self, phone_number: str) -> Optional[Reservation]:
-        for reservarion in self._reservations.values():
-            if(str(reservarion.guest_phone) == phone_number):
-                return reservarion
+    def find_by_phone_number(self, phone_number: str, hotel_id: str) -> Optional[Reservation]:
+        for reservation in self._reservations.values():
+            if getattr(reservation, "hotel_id", None) != hotel_id:
+                continue
+            if str(reservation.guest_phone) == phone_number:
+                return reservation
         return None
 
     def list_reservations(
         self,
+        hotel_id: str,
         from_date: Optional[date] = None,
         to_date: Optional[date] = None,
         status: Optional[str] = None,
@@ -40,6 +48,8 @@ class ReservationRepositoryMemory(ReservationRepository):
     ) -> List[Reservation]:
         result = []
         for r in self._reservations.values():
+            if getattr(r, "hotel_id", None) != hotel_id:
+                continue
             if from_date is not None and r.stay_period and r.stay_period.start < from_date:
                 continue
             if to_date is not None and r.stay_period and r.stay_period.start > to_date:
@@ -59,11 +69,14 @@ class ReservationRepositoryMemory(ReservationRepository):
 
     def count_by_status(
         self,
+        hotel_id: str,
         from_date: Optional[date] = None,
         to_date: Optional[date] = None,
     ) -> dict[str, int]:
         counts: dict[str, int] = {}
         for r in self._reservations.values():
+            if getattr(r, "hotel_id", None) != hotel_id:
+                continue
             if r.status.name in ("CANCELLED", "NO_SHOW"):
                 continue
             if from_date is not None and r.stay_period and r.stay_period.start < from_date:
@@ -73,7 +86,8 @@ class ReservationRepositoryMemory(ReservationRepository):
             counts[r.status.name] = counts.get(r.status.name, 0) + 1
         return counts
 
-    def save(self, reservation: Reservation) -> None:
+    def save(self, reservation: Reservation, hotel_id: str) -> None:
+        reservation.hotel_id = hotel_id
         self._reservations[reservation.id] = reservation
         
     def seed(self, reservation_id: str, phone: str):

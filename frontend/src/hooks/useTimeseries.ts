@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchTimeseries } from "../api/client";
+import { useTenant } from "../contexts/TenantContext";
 import type { TimeseriesResponse, DashboardFilters } from "../types/api";
 
 interface UseTimeseriesResult {
@@ -14,10 +15,18 @@ export function useTimeseries(filters?: DashboardFilters): UseTimeseriesResult {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const { hotelId } = useTenant();
+
   const load = () => {
+    if (!hotelId) {
+      setError("Hotel não definido. Faça login novamente.");
+      setData(null);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError(null);
-    fetchTimeseries({
+    fetchTimeseries(hotelId, {
       from: filters?.from,
       to: filters?.to,
       source: filters?.source || undefined,

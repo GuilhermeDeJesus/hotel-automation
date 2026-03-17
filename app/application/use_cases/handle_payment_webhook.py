@@ -78,7 +78,7 @@ class HandlePaymentWebhookUseCase:
                 message="metadata.payment_id ausente",
             )
 
-        payment = self.payment_repository.find_by_id(payment_id)
+        payment = self.payment_repository.find_by_id_global(payment_id)
         if not payment:
             return PaymentWebhookResult(
                 processed=False,
@@ -94,9 +94,11 @@ class HandlePaymentWebhookUseCase:
                 message="Pagamento já estava aprovado",
             )
 
+        hotel_id = payment.hotel_id
+
         try:
             payment.approve(transaction_id=session.get("id"))
-            self.payment_repository.save(payment)
+            self.payment_repository.save(hotel_id, payment)
         except Exception as e:
             return PaymentWebhookResult(
                 processed=False,
@@ -104,10 +106,10 @@ class HandlePaymentWebhookUseCase:
                 message=str(e),
             )
 
-        reservation = self.reservation_repository.find_by_id(payment.reservation_id)
+        reservation = self.reservation_repository.find_by_id(payment.reservation_id, hotel_id)
         if reservation and reservation.status == ReservationStatus.PENDING:
             reservation.confirm()
-            self.reservation_repository.save(reservation)
+            self.reservation_repository.save(reservation, hotel_id)
             return PaymentWebhookResult(
                 processed=True,
                 payment_id=payment_id,
@@ -131,7 +133,7 @@ class HandlePaymentWebhookUseCase:
                 message="metadata.payment_id ausente, evento ignorado",
             )
 
-        payment = self.payment_repository.find_by_id(payment_id)
+        payment = self.payment_repository.find_by_id_global(payment_id)
         if not payment:
             return PaymentWebhookResult(
                 processed=True,
@@ -139,9 +141,11 @@ class HandlePaymentWebhookUseCase:
                 message="Payment não encontrado",
             )
 
+        hotel_id = payment.hotel_id
+
         if payment.is_pending():
             payment.expire()
-            self.payment_repository.save(payment)
+            self.payment_repository.save(hotel_id, payment)
 
         return PaymentWebhookResult(
             processed=True,

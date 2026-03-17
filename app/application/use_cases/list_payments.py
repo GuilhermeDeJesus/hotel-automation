@@ -12,11 +12,13 @@ class ListPaymentsUseCase:
 
     def execute(
         self,
+        hotel_id: str,
         reservation_id: Optional[str] = None,
         status: Optional[str] = None,
         limit: int = 100,
     ) -> list[dict[str, Any]]:
         payments = self.payment_repository.list_payments(
+            hotel_id=hotel_id,
             reservation_id=reservation_id,
             status=status,
             limit=limit,

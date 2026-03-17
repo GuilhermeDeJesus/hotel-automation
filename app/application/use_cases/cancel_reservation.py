@@ -15,9 +15,9 @@ class CancelReservationUseCase:
         self.reservation_repository = reservation_repository
 
     def prepare_cancellation(
-        self, request_dto: CancelReservationRequestDTO
+        self, hotel_id: str, request_dto: CancelReservationRequestDTO
     ) -> CancelReservationResponseDTO:
-        reservation = self.reservation_repository.find_by_phone_number(request_dto.phone)
+        reservation = self.reservation_repository.find_by_phone_number(request_dto.phone, hotel_id)
         if not reservation:
             return CancelReservationResponseDTO(
                 message="Reserva não encontrada para este telefone.",
@@ -58,8 +58,8 @@ class CancelReservationUseCase:
             status=reservation.status.name,
         )
 
-    def cancel(self, request_dto: CancelReservationRequestDTO) -> CancelReservationResponseDTO:
-        reservation = self.reservation_repository.find_by_phone_number(request_dto.phone)
+    def cancel(self, hotel_id: str, request_dto: CancelReservationRequestDTO) -> CancelReservationResponseDTO:
+        reservation = self.reservation_repository.find_by_phone_number(request_dto.phone, hotel_id)
         if not reservation:
             return CancelReservationResponseDTO(
                 message="Reserva não encontrada para este telefone.",
@@ -68,7 +68,7 @@ class CancelReservationUseCase:
 
         try:
             reservation.cancel()
-            self.reservation_repository.save(reservation)
+            self.reservation_repository.save(reservation, hotel_id)
             return CancelReservationResponseDTO(
                 message="Reserva cancelada com sucesso.",
                 success=True,

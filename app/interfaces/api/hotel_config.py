@@ -1,13 +1,15 @@
 """Hotel config API - get and update hotel configuration."""
 from collections.abc import Generator
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from app.application.use_cases.get_hotel_config import GetHotelConfigUseCase
 from app.application.use_cases.update_hotel_config import UpdateHotelConfigUseCase
 from app.infrastructure.persistence.sql.database import SessionLocal
 from app.infrastructure.persistence.sql.hotel_repository_sql import HotelRepositorySQL
+from app.interfaces.dependencies.auth import get_current_user
+from app.infrastructure.persistence.sql.models import UserModel
 
 router = APIRouter(prefix="/saas/hotel", tags=["hotel-config"])
 
@@ -48,10 +50,18 @@ def get_update_hotel_config_use_case() -> Generator[UpdateHotelConfigUseCase, No
 
 @router.get("/config")
 def get_config(
+    current_user: UserModel = Depends(get_current_user),
     use_case: GetHotelConfigUseCase = Depends(get_hotel_config_use_case),
 ):
-    """Get active hotel payment configuration."""
-    config = use_case.execute()
+    """Get active hotel payment configuration for the current user's hotel."""
+    hotel_id = current_user.hotel_id
+    if not hotel_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuário não associado a um hotel",
+        )
+
+    config = use_case.execute(hotel_id=hotel_id)
     if not config:
         raise HTTPException(status_code=404, detail="Nenhum hotel ativo encontrado.")
     return config
@@ -60,10 +70,19 @@ def get_config(
 @router.patch("/config")
 def update_config(
     body: HotelConfigUpdate,
+    current_user: UserModel = Depends(get_current_user),
     use_case: UpdateHotelConfigUseCase = Depends(get_update_hotel_config_use_case),
 ):
-    """Update hotel configuration."""
+    """Update configuration for the current user's hotel."""
+    hotel_id = current_user.hotel_id
+    if not hotel_id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuário não associado a um hotel",
+        )
+
     result = use_case.execute(
+        hotel_id=hotel_id,
         name=body.name,
         address=body.address,
         contact_phone=body.contact_phone,
