@@ -66,8 +66,8 @@ class SaaSRepositorySQL:
 
         return self._start_of_day(start_date), self._end_of_day(end_date)
 
-    def _build_filtered_phones_select(self, source: str | None, stage: str | None):
-        lead_phone_query = select(LeadModel.phone_number)
+    def _build_filtered_phones_select(self, hotel_id: str, source: str | None, stage: str | None):
+        lead_phone_query = select(LeadModel.phone_number).where(LeadModel.hotel_id == hotel_id)
         if source:
             lead_phone_query = lead_phone_query.where(LeadModel.source == source)
         if stage:
@@ -88,6 +88,7 @@ class SaaSRepositorySQL:
 
     def get_timeseries(
         self,
+        hotel_id: str,
         start_date: date | None,
         end_date: date | None,
         source: str | None = None,
@@ -98,9 +99,10 @@ class SaaSRepositorySQL:
         normalized_source = self._normalize_source(source)
         normalized_stage = self._normalize_stage(status)
         normalized_granularity = self._normalize_granularity(granularity)
-        filtered_phones_select = self._build_filtered_phones_select(normalized_source, normalized_stage)
+        filtered_phones_select = self._build_filtered_phones_select(hotel_id, normalized_source, normalized_stage)
 
         day_points = self._build_daily_series(
+            hotel_id=hotel_id,
             start_dt=start_dt,
             end_dt=end_dt,
             source=normalized_source,
@@ -122,6 +124,7 @@ class SaaSRepositorySQL:
 
     def get_kpis_comparison(
         self,
+        hotel_id: str,
         start_date: date | None,
         end_date: date | None,
         source: str | None = None,
@@ -136,12 +139,14 @@ class SaaSRepositorySQL:
         previous_start_date = previous_end_date - timedelta(days=window_days - 1)
 
         current_payload = self.get_kpis(
+            hotel_id=hotel_id,
             start_date=current_start_dt.date(),
             end_date=current_end_dt.date(),
             source=source,
             status=status,
         )
         previous_payload = self.get_kpis(
+            hotel_id=hotel_id,
             start_date=previous_start_date,
             end_date=previous_end_date,
             source=source,
@@ -152,6 +157,7 @@ class SaaSRepositorySQL:
         previous_base = self._base_kpi_payload(previous_payload)
 
         current_series = self.get_timeseries(
+            hotel_id=hotel_id,
             start_date=current_start_dt.date(),
             end_date=current_end_dt.date(),
             source=source,
@@ -159,6 +165,7 @@ class SaaSRepositorySQL:
             granularity=normalized_granularity,
         )
         previous_series = self.get_timeseries(
+            hotel_id=hotel_id,
             start_date=previous_start_date,
             end_date=previous_end_date,
             source=source,
@@ -252,6 +259,7 @@ class SaaSRepositorySQL:
 
     def track_event(
         self,
+        hotel_id: str,
         phone: str,
         source: str,
         event_type: str,
@@ -262,8 +270,11 @@ class SaaSRepositorySQL:
         normalized_phone = self._normalize_phone(phone)
         if not normalized_phone:
             return
+        if not hotel_id:
+            return
 
         row = AnalyticsEventModel(
+            hotel_id=hotel_id,
             phone_number=normalized_phone,
             source=(source or "unknown").lower(),
             event_type=event_type,
@@ -308,14 +319,14 @@ class SaaSRepositorySQL:
         self.session.commit()
         return lead
 
-    def sync_lead_stage_from_reservation(self, phone: str) -> None:
+    def sync_lead_stage_from_reservation(self, hotel_id: str, phone: str) -> None:
         normalized_phone = self._normalize_phone(phone)
         if not normalized_phone:
             return
 
         lead: LeadModel | None = (
             self.session.query(LeadModel)
-            .filter_by(phone_number=normalized_phone)
+            .filter_by(phone_number=normalized_phone, hotel_id=hotel_id)
             .first()
         )
         if lead is None:
@@ -323,7 +334,7 @@ class SaaSRepositorySQL:
 
         reservation: ReservationModel | None = (
             self.session.query(ReservationModel)
-            .filter_by(guest_phone=normalized_phone)
+            .filter_by(guest_phone=normalized_phone, hotel_id=hotel_id)
             .order_by(ReservationModel.updated_at.desc())
             .first()
         )
@@ -342,6 +353,7 @@ class SaaSRepositorySQL:
 
     def get_kpis(
         self,
+        hotel_id: str,
         start_date: date | None,
         end_date: date | None,
         source: str | None = None,
@@ -352,11 +364,12 @@ class SaaSRepositorySQL:
         normalized_source = self._normalize_source(source)
         normalized_stage = self._normalize_stage(status)
         normalized_granularity = self._normalize_granularity(granularity)
-        filtered_phones_select = self._build_filtered_phones_select(normalized_source, normalized_stage)
+        filtered_phones_select = self._build_filtered_phones_select(hotel_id, normalized_source, normalized_stage)
 
         lead_query = self.session.query(func.count(LeadModel.id))
         lead_query = lead_query.filter(LeadModel.first_seen_at >= start_dt)
         lead_query = lead_query.filter(LeadModel.first_seen_at <= end_dt)
+        lead_query = lead_query.filter(LeadModel.hotel_id == hotel_id)
         if normalized_source:
             lead_query = lead_query.filter(LeadModel.source == normalized_source)
         if normalized_stage:
@@ -364,11 +377,13 @@ class SaaSRepositorySQL:
         leads_captured = int(lead_query.scalar() or 0)
 
         inbound_q = self.session.query(func.count(AnalyticsEventModel.id)).filter(
-            AnalyticsEventModel.event_type == "inbound_message"
+            AnalyticsEventModel.event_type == "inbound_message",
+            AnalyticsEventModel.hotel_id == hotel_id,
         )
         outbound_q = self.session.query(func.count(AnalyticsEventModel.id)).filter(
             AnalyticsEventModel.event_type == "outbound_message",
             AnalyticsEventModel.success.is_(True),
+            AnalyticsEventModel.hotel_id == hotel_id,
         )
         inbound_q = inbound_q.filter(AnalyticsEventModel.created_at >= start_dt)
         outbound_q = outbound_q.filter(AnalyticsEventModel.created_at >= start_dt)
@@ -388,6 +403,7 @@ class SaaSRepositorySQL:
         reservation_q = self.session.query(ReservationModel)
         reservation_q = reservation_q.filter(ReservationModel.created_at >= start_dt)
         reservation_q = reservation_q.filter(ReservationModel.created_at <= end_dt)
+        reservation_q = reservation_q.filter(ReservationModel.hotel_id == hotel_id)
         if normalized_source or normalized_stage:
             reservation_q = reservation_q.filter(ReservationModel.guest_phone.in_(filtered_phones_select))
 
@@ -402,6 +418,7 @@ class SaaSRepositorySQL:
         )
         checkins_q = checkins_q.filter(ReservationModel.updated_at >= start_dt)
         checkins_q = checkins_q.filter(ReservationModel.updated_at <= end_dt)
+        checkins_q = checkins_q.filter(ReservationModel.hotel_id == hotel_id)
         if normalized_source or normalized_stage:
             checkins_q = checkins_q.filter(ReservationModel.guest_phone.in_(filtered_phones_select))
         checkins_completed = int(checkins_q.scalar() or 0)
@@ -412,6 +429,7 @@ class SaaSRepositorySQL:
         )
         avg_resp_q = avg_resp_q.filter(AnalyticsEventModel.created_at >= start_dt)
         avg_resp_q = avg_resp_q.filter(AnalyticsEventModel.created_at <= end_dt)
+        avg_resp_q = avg_resp_q.filter(AnalyticsEventModel.hotel_id == hotel_id)
         if normalized_source:
             avg_resp_q = avg_resp_q.filter(AnalyticsEventModel.source == normalized_source)
         if normalized_source or normalized_stage:
@@ -425,6 +443,7 @@ class SaaSRepositorySQL:
         )
         by_source_q = by_source_q.filter(LeadModel.first_seen_at >= start_dt)
         by_source_q = by_source_q.filter(LeadModel.first_seen_at <= end_dt)
+        by_source_q = by_source_q.filter(LeadModel.hotel_id == hotel_id)
         if normalized_source:
             by_source_q = by_source_q.filter(LeadModel.source == normalized_source)
         if normalized_stage:
@@ -433,6 +452,7 @@ class SaaSRepositorySQL:
         conversion_by_source = {source: int(count) for source, count in by_source_rows}
 
         daily_series = self._build_daily_series(
+            hotel_id=hotel_id,
             start_dt=start_dt,
             end_dt=end_dt,
             source=normalized_source,
@@ -462,6 +482,7 @@ class SaaSRepositorySQL:
 
     def _build_daily_series(
         self,
+        hotel_id: str,
         start_dt: datetime,
         end_dt: datetime,
         source: str | None,
@@ -474,6 +495,7 @@ class SaaSRepositorySQL:
         )
         leads_by_day_q = leads_by_day_q.filter(LeadModel.first_seen_at >= start_dt)
         leads_by_day_q = leads_by_day_q.filter(LeadModel.first_seen_at <= end_dt)
+        leads_by_day_q = leads_by_day_q.filter(LeadModel.hotel_id == hotel_id)
         if source:
             leads_by_day_q = leads_by_day_q.filter(LeadModel.source == source)
         if stage:
@@ -485,6 +507,7 @@ class SaaSRepositorySQL:
             func.count(AnalyticsEventModel.id),
         ).filter(
             AnalyticsEventModel.event_type == "inbound_message",
+            AnalyticsEventModel.hotel_id == hotel_id,
             AnalyticsEventModel.created_at >= start_dt,
             AnalyticsEventModel.created_at <= end_dt,
         )
@@ -493,6 +516,7 @@ class SaaSRepositorySQL:
             func.count(AnalyticsEventModel.id),
         ).filter(
             AnalyticsEventModel.event_type == "outbound_message",
+            AnalyticsEventModel.hotel_id == hotel_id,
             AnalyticsEventModel.success.is_(True),
             AnalyticsEventModel.created_at >= start_dt,
             AnalyticsEventModel.created_at <= end_dt,
@@ -503,6 +527,7 @@ class SaaSRepositorySQL:
         ).filter(
             AnalyticsEventModel.event_type == "outbound_message",
             AnalyticsEventModel.response_time_ms.isnot(None),
+            AnalyticsEventModel.hotel_id == hotel_id,
             AnalyticsEventModel.created_at >= start_dt,
             AnalyticsEventModel.created_at <= end_dt,
         )
@@ -530,6 +555,7 @@ class SaaSRepositorySQL:
             func.count(ReservationModel.id),
         ).filter(
             ReservationModel.status == "CONFIRMED",
+            ReservationModel.hotel_id == hotel_id,
             ReservationModel.updated_at >= start_dt,
             ReservationModel.updated_at <= end_dt,
         )
@@ -538,6 +564,7 @@ class SaaSRepositorySQL:
             func.count(ReservationModel.id),
         ).filter(
             ReservationModel.status == "CHECKED_IN",
+            ReservationModel.hotel_id == hotel_id,
             ReservationModel.updated_at >= start_dt,
             ReservationModel.updated_at <= end_dt,
         )

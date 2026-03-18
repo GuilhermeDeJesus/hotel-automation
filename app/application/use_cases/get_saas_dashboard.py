@@ -23,12 +23,17 @@ class GetSaaSDashboardUseCase:
         self.cache_ttl_seconds = cache_ttl_seconds
 
     def _cache_key(self, operation: str, params: dict[str, Any]) -> str:
+        hotel_id = params.get("hotel_id") or "global"
         normalized = json.dumps(params, sort_keys=True, default=str, ensure_ascii=False)
         digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
-        return f"{self.CACHE_KEY_PREFIX}:{operation}:{digest}"
+        return f"{self.CACHE_KEY_PREFIX}:hotel:{hotel_id}:{operation}:{digest}"
 
     @classmethod
-    def invalidate_analytics_cache(cls, cache_repository: CacheRepository | None) -> int:
+    def invalidate_analytics_cache(
+        cls,
+        cache_repository: CacheRepository | None,
+        hotel_id: str | None = None,
+    ) -> int:
         if cache_repository is None:
             return 0
 
@@ -37,7 +42,7 @@ class GetSaaSDashboardUseCase:
             return 0
 
         deleted = 0
-        pattern = f"{cls.CACHE_KEY_PREFIX}:*"
+        pattern = f"{cls.CACHE_KEY_PREFIX}:*" if not hotel_id else f"{cls.CACHE_KEY_PREFIX}:hotel:{hotel_id}:*"
         try:
             for key in client.scan_iter(match=pattern):
                 normalized_key = key.decode("utf-8") if isinstance(key, bytes) else str(key)
@@ -105,6 +110,7 @@ class GetSaaSDashboardUseCase:
 
     def get_kpis(
         self,
+        hotel_id: str,
         start_date: date | None,
         end_date: date | None,
         source: str | None = None,
@@ -112,6 +118,7 @@ class GetSaaSDashboardUseCase:
         granularity: str | None = None,
     ) -> dict[str, Any]:
         params = {
+            "hotel_id": hotel_id,
             "start_date": start_date,
             "end_date": end_date,
             "source": source,
@@ -122,6 +129,7 @@ class GetSaaSDashboardUseCase:
             operation="kpis",
             params=params,
             compute=lambda: self.saas_repository.get_kpis(
+                hotel_id,
                 start_date,
                 end_date,
                 source=source,
@@ -168,6 +176,7 @@ class GetSaaSDashboardUseCase:
 
     def get_timeseries(
         self,
+        hotel_id: str,
         start_date: date | None,
         end_date: date | None,
         source: str | None = None,
@@ -175,6 +184,7 @@ class GetSaaSDashboardUseCase:
         granularity: str | None = None,
     ) -> dict[str, Any]:
         params = {
+            "hotel_id": hotel_id,
             "start_date": start_date,
             "end_date": end_date,
             "source": source,
@@ -185,6 +195,7 @@ class GetSaaSDashboardUseCase:
             operation="timeseries",
             params=params,
             compute=lambda: self.saas_repository.get_timeseries(
+                hotel_id,
                 start_date,
                 end_date,
                 source=source,
@@ -195,6 +206,7 @@ class GetSaaSDashboardUseCase:
 
     def get_kpis_comparison(
         self,
+        hotel_id: str,
         start_date: date | None,
         end_date: date | None,
         source: str | None = None,
@@ -202,6 +214,7 @@ class GetSaaSDashboardUseCase:
         granularity: str | None = None,
     ) -> dict[str, Any]:
         params = {
+            "hotel_id": hotel_id,
             "start_date": start_date,
             "end_date": end_date,
             "source": source,
@@ -212,6 +225,7 @@ class GetSaaSDashboardUseCase:
             operation="kpis_compare",
             params=params,
             compute=lambda: self.saas_repository.get_kpis_comparison(
+                hotel_id,
                 start_date,
                 end_date,
                 source=source,

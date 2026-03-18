@@ -19,6 +19,7 @@ class GetHotelConfigUseCase:
             "name": hotel.name,
             "address": hotel.address,
             "contact_phone": hotel.contact_phone,
+            "pix_key": getattr(hotel, "pix_key", None),
             "checkin_time": hotel.policies.checkin_time,
             "checkout_time": hotel.policies.checkout_time,
             "cancellation_policy": hotel.policies.cancellation_policy,

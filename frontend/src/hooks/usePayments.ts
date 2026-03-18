@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { fetchPayments } from "../api/client";
 import { useTenant } from "../contexts/TenantContext";
 import type { PaymentsResponse, PaymentsFilters } from "../types/api";
@@ -16,8 +16,11 @@ export function usePayments(filters?: PaymentsFilters): UsePaymentsResult {
   const [isLoading, setIsLoading] = useState(true);
 
   const { hotelId } = useTenant();
+  const requestIdRef = useRef(0);
 
   const load = () => {
+    const requestId = ++requestIdRef.current;
+
     if (!hotelId) {
       setError("Hotel não definido. Faça login novamente.");
       setData(null);
@@ -31,16 +34,23 @@ export function usePayments(filters?: PaymentsFilters): UsePaymentsResult {
       status: filters?.status || undefined,
       limit: 100,
     })
-      .then(setData)
-      .catch((e) =>
-        setError(e instanceof Error ? e.message : "Erro ao carregar pagamentos")
-      )
-      .finally(() => setIsLoading(false));
+      .then((res) => {
+        if (requestId !== requestIdRef.current) return;
+        setData(res);
+      })
+      .catch((e) => {
+        if (requestId !== requestIdRef.current) return;
+        setError(e instanceof Error ? e.message : "Erro ao carregar pagamentos");
+      })
+      .finally(() => {
+        if (requestId !== requestIdRef.current) return;
+        setIsLoading(false);
+      });
   };
 
   useEffect(() => {
     load();
-  }, [filters?.reservation_id, filters?.status]);
+  }, [hotelId, filters?.reservation_id, filters?.status]);
 
   return { data, error, isLoading, refetch: load };
 }

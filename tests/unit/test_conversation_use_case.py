@@ -43,12 +43,12 @@ class DummyMessenger:
 
 
 class DummyReservationContextService:
-    def get_context_for_phone(self, phone: str) -> str:
+    def get_context_for_phone(self, hotel_id: str, phone_number: str) -> str:
         return ""
 
 
 class DummyHotelContextService:
-    def get_context(self) -> str:
+    def get_context(self, hotel_id: str | None = None) -> str:
         return ""
 
 

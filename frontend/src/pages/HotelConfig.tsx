@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useHotelConfig } from "../hooks/useHotelConfig";
 import { useRooms } from "../hooks/useRooms";
 import {
@@ -6,15 +6,20 @@ import {
   createRoom,
   updateRoom,
   deleteRoom,
+  uploadHotelMedia,
+  fetchHotelMedia,
+  deleteHotelMedia,
 } from "../api/client";
 import { useTenant } from "../contexts/TenantContext";
 import LoadingState from "../components/LoadingState";
 import ErrorState from "../components/ErrorState";
 import { useToast } from "../contexts/ToastContext";
 import RoomFormModal from "../components/RoomFormModal";
+import TableScroll from "../components/ui/TableScroll";
 import type { Room } from "../types/api";
+import type { HotelMedia } from "../types/api";
 
-type TabId = "overview" | "info" | "policies" | "amenities" | "payment" | "rooms";
+type TabId = "overview" | "info" | "policies" | "amenities" | "payment" | "rooms" | "photos";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "overview", label: "Visão geral" },
@@ -23,6 +28,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "amenities", label: "Comodidades" },
   { id: "payment", label: "Pagamento" },
   { id: "rooms", label: "Quartos" },
+  { id: "photos", label: "Fotos" },
 ];
 
 function InputField({
@@ -119,10 +125,25 @@ export default function HotelConfig() {
   const { data, error, isLoading, refetch } = useHotelConfig();
   const { data: rooms, error: roomsError, isLoading: roomsLoading, refetch: refetchRooms } = useRooms();
   const { showToast } = useToast();
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [roomModalOpen, setRoomModalOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [roomSaving, setRoomSaving] = useState(false);
+
+  const [hotelPhotoFile, setHotelPhotoFile] = useState<File | null>(null);
+  const [hotelPhotoCaption, setHotelPhotoCaption] = useState<string>("");
+  const [roomPhotoNumber, setRoomPhotoNumber] = useState<string>("");
+  const [roomPhotoFile, setRoomPhotoFile] = useState<File | null>(null);
+  const [roomPhotoCaption, setRoomPhotoCaption] = useState<string>("");
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+
+  const [hotelMediaItems, setHotelMediaItems] = useState<HotelMedia[]>([]);
+  const [roomMediaByRoomNumber, setRoomMediaByRoomNumber] = useState<Record<string, HotelMedia[]>>({});
+  const [loadingHotelMedia, setLoadingHotelMedia] = useState(false);
+  const [loadingAllRoomMedia, setLoadingAllRoomMedia] = useState(false);
+  const roomsSignatureRef = useRef<string>("");
+  const [maxRoomPhotosToLoad, setMaxRoomPhotosToLoad] = useState<number>(10);
   const [form, setForm] = useState({
     name: "",
     address: "",
@@ -133,6 +154,7 @@ export default function HotelConfig() {
     pet_policy: "",
     child_policy: "",
     amenities: "",
+    pix_key: "",
     requires_payment_for_confirmation: false,
     allows_reservation_without_payment: true,
   });
@@ -151,11 +173,27 @@ export default function HotelConfig() {
         pet_policy: data.pet_policy ?? "",
         child_policy: data.child_policy ?? "",
         amenities: data.amenities ?? "",
+        pix_key: data.pix_key ?? "",
         requires_payment_for_confirmation: data.requires_payment_for_confirmation ?? false,
         allows_reservation_without_payment: data.allows_reservation_without_payment ?? true,
       });
     }
   }, [data]);
+
+  useEffect(() => {
+    if (activeTab !== "photos" || !hotelId) return;
+
+    loadHotelPhotos();
+
+    if (roomsLoading) return;
+
+    const signature = (rooms || []).map((r) => r.number).join("|");
+    if (signature && signature !== roomsSignatureRef.current) {
+      roomsSignatureRef.current = signature;
+      loadAllRoomPhotos();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, hotelId, roomsLoading, rooms, maxRoomPhotosToLoad]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,6 +213,7 @@ export default function HotelConfig() {
         pet_policy: form.pet_policy,
         child_policy: form.child_policy,
         amenities: form.amenities,
+        pix_key: form.pix_key || undefined,
         requires_payment_for_confirmation: form.requires_payment_for_confirmation,
         allows_reservation_without_payment: form.allows_reservation_without_payment,
       });
@@ -234,6 +273,76 @@ export default function HotelConfig() {
       refetchRooms();
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Erro ao desativar quarto", "error");
+    }
+  };
+
+  const loadHotelPhotos = async () => {
+    if (!hotelId) return;
+    setLoadingHotelMedia(true);
+    try {
+      const res = await fetchHotelMedia(hotelId, { scope: "HOTEL", limit: 50 });
+      setHotelMediaItems(Array.from(res.items ?? []));
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Erro ao carregar fotos do hotel", "error");
+    } finally {
+      setLoadingHotelMedia(false);
+    }
+  };
+
+  const loadAllRoomPhotos = async () => {
+    if (!hotelId) return;
+    if (!rooms || rooms.length === 0) {
+      setRoomMediaByRoomNumber({});
+      return;
+    }
+
+    setLoadingAllRoomMedia(true);
+    try {
+      const sortedRooms = [...rooms].sort((a, b) => {
+        const na = Number(a.number);
+        const nb = Number(b.number);
+        if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+        return a.number.localeCompare(b.number);
+      });
+
+      const results = await Promise.all(
+        sortedRooms.map(async (r) => {
+          try {
+            const res = await fetchHotelMedia(hotelId, {
+              scope: "ROOM",
+              room_number: r.number,
+              limit: Math.max(1, maxRoomPhotosToLoad),
+            });
+            const items = Array.from(res.items ?? []) as HotelMedia[];
+            return [r.number, items] as const;
+          } catch {
+            return [r.number, [] as HotelMedia[]] as const;
+          }
+        })
+      );
+
+      const grouped: Record<string, HotelMedia[]> = {};
+      for (const [roomNumber, items] of results) {
+        grouped[roomNumber] = items;
+      }
+      setRoomMediaByRoomNumber(grouped);
+    } finally {
+      setLoadingAllRoomMedia(false);
+    }
+  };
+
+  const handleDeletePhoto = async (mediaId: string) => {
+    if (!hotelId) return;
+    try {
+      await deleteHotelMedia(hotelId, mediaId);
+      showToast("Foto excluída com sucesso.", "success");
+      // Recarrega listas
+      await loadHotelPhotos();
+      if (activeTab === "photos") {
+        await loadAllRoomPhotos();
+      }
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Erro ao excluir foto", "error");
     }
   };
 
@@ -406,7 +515,7 @@ export default function HotelConfig() {
         )}
 
         {activeTab === "rooms" && (
-          <div className="card" style={{ padding: "1.5rem", marginBottom: "1.5rem", overflowX: "auto" }}>
+          <div className="card" style={{ padding: "1.5rem", marginBottom: "1.5rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <h2 style={{ fontSize: "1rem", fontWeight: 600 }}>Quartos</h2>
               <button
@@ -438,74 +547,422 @@ export default function HotelConfig() {
                 Nenhum quarto cadastrado. Clique em "Novo quarto" para adicionar.
               </div>
             ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid var(--color-border)", textAlign: "left" }}>
-                    <th style={{ padding: "0.5rem 0.75rem", fontWeight: 600 }}>Número</th>
-                    <th style={{ padding: "0.5rem 0.75rem", fontWeight: 600 }}>Tipo</th>
-                    <th style={{ padding: "0.5rem 0.75rem", fontWeight: 600 }}>Diária</th>
-                    <th style={{ padding: "0.5rem 0.75rem", fontWeight: 600 }}>Capacidade</th>
-                    <th style={{ padding: "0.5rem 0.75rem", fontWeight: 600 }}>Status</th>
-                    <th style={{ padding: "0.5rem 0.75rem", fontWeight: 600 }}>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rooms.map((r) => (
-                    <tr key={r.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                      <td style={{ padding: "0.5rem 0.75rem" }}>{r.number}</td>
-                      <td style={{ padding: "0.5rem 0.75rem" }}>{r.room_type}</td>
-                      <td style={{ padding: "0.5rem 0.75rem" }}>
-                        R$ {r.daily_rate.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                      </td>
-                      <td style={{ padding: "0.5rem 0.75rem" }}>{r.max_guests}</td>
-                      <td style={{ padding: "0.5rem 0.75rem" }}>{r.status}</td>
-                      <td style={{ padding: "0.5rem 0.75rem" }}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingRoom(r);
-                            setRoomModalOpen(true);
-                          }}
+              <TableScroll>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.875rem" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--color-border)", textAlign: "left" }}>
+                      <th style={{ padding: "0.5rem 0.75rem", fontWeight: 600 }}>Número</th>
+                      <th style={{ padding: "0.5rem 0.75rem", fontWeight: 600 }}>Tipo</th>
+                      <th style={{ padding: "0.5rem 0.75rem", fontWeight: 600 }}>Diária</th>
+                      <th style={{ padding: "0.5rem 0.75rem", fontWeight: 600 }}>Capacidade</th>
+                      <th style={{ padding: "0.5rem 0.75rem", fontWeight: 600 }}>Status</th>
+                      <th style={{ padding: "0.5rem 0.75rem", fontWeight: 600 }}>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rooms.map((r) => (
+                      <tr key={r.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                        <td style={{ padding: "0.5rem 0.75rem" }}>{r.number}</td>
+                        <td style={{ padding: "0.5rem 0.75rem" }}>{r.room_type}</td>
+                        <td style={{ padding: "0.5rem 0.75rem" }}>
+                          R$ {r.daily_rate.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ padding: "0.5rem 0.75rem" }}>{r.max_guests}</td>
+                        <td style={{ padding: "0.5rem 0.75rem" }}>{r.status}</td>
+                        <td style={{ padding: "0.5rem 0.75rem" }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingRoom(r);
+                              setRoomModalOpen(true);
+                            }}
+                            style={{
+                              padding: "0.25rem 0.5rem",
+                              fontSize: "0.8125rem",
+                              marginRight: "0.5rem",
+                              background: "transparent",
+                              border: "1px solid var(--color-border)",
+                              borderRadius: "var(--radius-sm)",
+                              color: "var(--color-text)",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRoom(r.number)}
+                            style={{
+                              padding: "0.25rem 0.5rem",
+                              fontSize: "0.8125rem",
+                              background: "transparent",
+                              border: "1px solid var(--color-error-muted)",
+                              borderRadius: "var(--radius-sm)",
+                              color: "var(--color-error)",
+                              cursor: "pointer",
+                            }}
+                          >
+                            Desativar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableScroll>
+            )}
+          </div>
+        )}
+
+        {activeTab === "photos" && (
+          <div className="card" style={{ padding: "1.5rem", marginBottom: "1.5rem", maxWidth: 720 }}>
+            <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem" }}>Fotos</h2>
+
+            <div style={{ marginBottom: "2rem" }}>
+              <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "0.75rem" }}>Hotel (geral)</h3>
+
+              <InputField
+                label="Legenda (opcional)"
+                value={hotelPhotoCaption}
+                onChange={(v) => setHotelPhotoCaption(v)}
+                placeholder="Ex: Recepção"
+              />
+
+              <div style={{ marginBottom: "1rem" }}>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    setHotelPhotoFile(f);
+                  }}
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={uploadingMedia}
+                onClick={async () => {
+                  try {
+                    if (!hotelId) throw new Error("Hotel não definido.");
+                    if (!hotelPhotoFile) throw new Error("Selecione uma imagem para enviar.");
+                    setUploadingMedia(true);
+                    await uploadHotelMedia(hotelId, {
+                      scope: "HOTEL",
+                      caption: hotelPhotoCaption || undefined,
+                      file: hotelPhotoFile,
+                    });
+                    showToast("Foto do hotel enviada com sucesso.", "success");
+                    setHotelPhotoFile(null);
+                    setHotelPhotoCaption("");
+                    await loadHotelPhotos();
+                  } catch (e) {
+                    showToast(e instanceof Error ? e.message : "Erro ao enviar foto", "error");
+                  } finally {
+                    setUploadingMedia(false);
+                  }
+                }}
+                style={{
+                  padding: "0.6rem 1rem",
+                  fontSize: "0.875rem",
+                  fontWeight: 700,
+                  background: "var(--color-accent)",
+                  border: "none",
+                  borderRadius: "var(--radius-sm)",
+                  color: "white",
+                  cursor: "pointer",
+                }}
+              >
+                Enviar foto do hotel
+              </button>
+              <div style={{ marginTop: "0.5rem", fontSize: "0.8125rem", color: "var(--color-text-muted)" }}>
+                Limite: 5MB. Formatos: jpg/png/webp.
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "1.5rem" }}>
+              <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "0.75rem" }}>
+                Por quarto
+              </h3>
+
+              <InputField
+                label="Número do quarto"
+                value={roomPhotoNumber}
+                onChange={(v) => setRoomPhotoNumber(v)}
+                placeholder="Ex: 101"
+              />
+
+              <InputField
+                label="Legenda (opcional)"
+                value={roomPhotoCaption}
+                onChange={(v) => setRoomPhotoCaption(v)}
+                placeholder="Ex: Quarto 101 - cama"
+              />
+
+              <div style={{ marginBottom: "1rem" }}>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    setRoomPhotoFile(f);
+                  }}
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={uploadingMedia}
+                onClick={async () => {
+                  try {
+                    if (!hotelId) throw new Error("Hotel não definido.");
+                    const roomNumber = roomPhotoNumber.trim();
+                    if (!roomNumber) throw new Error("Informe o número do quarto.");
+                    if (!roomPhotoFile) throw new Error("Selecione uma imagem para enviar.");
+                    setUploadingMedia(true);
+                    await uploadHotelMedia(hotelId, {
+                      scope: "ROOM",
+                      room_number: roomNumber,
+                      caption: roomPhotoCaption || undefined,
+                      file: roomPhotoFile,
+                    });
+                    showToast("Foto do quarto enviada com sucesso.", "success");
+                    setRoomPhotoFile(null);
+                    setRoomPhotoCaption("");
+                    setRoomPhotoNumber("");
+                    await loadAllRoomPhotos();
+                  } catch (e) {
+                    showToast(e instanceof Error ? e.message : "Erro ao enviar foto", "error");
+                  } finally {
+                    setUploadingMedia(false);
+                  }
+                }}
+                style={{
+                  padding: "0.6rem 1rem",
+                  fontSize: "0.875rem",
+                  fontWeight: 700,
+                  background: "var(--color-accent)",
+                  border: "none",
+                  borderRadius: "var(--radius-sm)",
+                  color: "white",
+                  cursor: "pointer",
+                }}
+              >
+                Enviar foto do quarto
+              </button>
+            </div>
+
+            <div style={{ marginTop: "2rem" }}>
+              <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: "0.75rem" }}>
+                Preview e exclusão
+              </h3>
+
+              <div style={{ marginBottom: "2rem" }}>
+                <h4 style={{ fontSize: "0.9rem", fontWeight: 600, marginBottom: "0.75rem" }}>
+                  Hotel (geral)
+                </h4>
+
+                {loadingHotelMedia ? (
+                  <div style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                    Carregando...
+                  </div>
+                ) : hotelMediaItems.length === 0 ? (
+                  <div style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                    Nenhuma foto cadastrada para o hotel.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+                    {hotelMediaItems.map((m) => (
+                      <div
+                        key={m.id}
+                        style={{
+                          width: 150,
+                          border: "1px solid var(--color-border)",
+                          borderRadius: "var(--radius-sm)",
+                          padding: "0.5rem",
+                        }}
+                      >
+                        <img
+                          src={`${apiBaseUrl}/saas/hotel/${encodeURIComponent(hotelId || "")}/media-public/${encodeURIComponent(m.id)}`}
+                          alt={m.caption ?? "Foto do hotel"}
                           style={{
-                            padding: "0.25rem 0.5rem",
-                            fontSize: "0.8125rem",
-                            marginRight: "0.5rem",
-                            background: "transparent",
-                            border: "1px solid var(--color-border)",
+                            width: "100%",
+                            height: 90,
+                            objectFit: "cover",
                             borderRadius: "var(--radius-sm)",
-                            color: "var(--color-text)",
-                            cursor: "pointer",
+                            display: "block",
+                            marginBottom: "0.5rem",
+                            background: "var(--color-bg)",
                           }}
-                        >
-                          Editar
-                        </button>
+                        />
+                        <div style={{ fontSize: "0.8125rem", fontWeight: 600, marginBottom: "0.25rem" }}>
+                          {m.caption ? m.caption : "Sem legenda"}
+                        </div>
                         <button
                           type="button"
-                          onClick={() => handleDeleteRoom(r.number)}
+                          onClick={() => handleDeletePhoto(m.id)}
                           style={{
-                            padding: "0.25rem 0.5rem",
+                            padding: "0.35rem 0.5rem",
                             fontSize: "0.8125rem",
+                            fontWeight: 700,
                             background: "transparent",
                             border: "1px solid var(--color-error-muted)",
                             borderRadius: "var(--radius-sm)",
                             color: "var(--color-error)",
                             cursor: "pointer",
+                            width: "100%",
                           }}
                         >
-                          Desativar
+                          Excluir
                         </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div style={{ marginBottom: "1.5rem" }}>
+                <h4 style={{ fontSize: "0.9rem", fontWeight: 600, marginBottom: "0.75rem" }}>
+                  Por quarto
+                </h4>
+
+              <div style={{ marginBottom: "1rem", display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                <div style={{ minWidth: 260 }}>
+                  <div style={{ fontSize: "0.8125rem", color: "var(--color-text-muted)", marginBottom: "0.25rem" }}>
+                    Máximo fotos por quarto (auto-carregamento)
+                  </div>
+                  <input
+                    type="number"
+                    min={1}
+                    value={maxRoomPhotosToLoad}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      setMaxRoomPhotosToLoad(Number.isFinite(v) && v > 0 ? v : 1);
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "0.5rem 0.75rem",
+                      fontSize: "0.875rem",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "var(--radius-sm)",
+                      background: "var(--color-bg)",
+                      color: "var(--color-text)",
+                    }}
+                  />
+                </div>
+                {loadingAllRoomMedia && (
+                  <div style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                    Carregando...
+                  </div>
+                )}
+              </div>
+
+                {roomsLoading ? (
+                  <div style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                    Carregando quartos...
+                  </div>
+                ) : roomsError ? (
+                  <div style={{ fontSize: "0.875rem", color: "var(--color-error)" }}>
+                    {roomsError}
+                  </div>
+                ) : rooms.length === 0 ? (
+                  <div style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                    Nenhum quarto cadastrado.
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                    {[...rooms]
+                      .sort((a, b) => {
+                        const na = Number(a.number);
+                        const nb = Number(b.number);
+                        if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+                        return a.number.localeCompare(b.number);
+                      })
+                      .map((r) => {
+                        const items = roomMediaByRoomNumber[r.number] || [];
+                        return (
+                          <div key={r.id} style={{ paddingBottom: "0.25rem" }}>
+                            <div style={{ fontSize: "0.95rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+                              Quarto {r.number}
+                            </div>
+
+                            {loadingAllRoomMedia ? (
+                              <div style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                                Carregando fotos...
+                              </div>
+                            ) : items.length === 0 ? (
+                              <div style={{ fontSize: "0.875rem", color: "var(--color-text-muted)" }}>
+                                Sem fotos cadastradas.
+                              </div>
+                            ) : (
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem" }}>
+                                {items.map((m) => (
+                                  <div
+                                    key={m.id}
+                                    style={{
+                                      width: 150,
+                                      border: "1px solid var(--color-border)",
+                                      borderRadius: "var(--radius-sm)",
+                                      padding: "0.5rem",
+                                    }}
+                                  >
+                                    <img
+                                      src={`${apiBaseUrl}/saas/hotel/${encodeURIComponent(hotelId || "")}/media-public/${encodeURIComponent(m.id)}`}
+                                      alt={m.caption ?? "Foto do quarto"}
+                                      style={{
+                                        width: "100%",
+                                        height: 90,
+                                        objectFit: "cover",
+                                        borderRadius: "var(--radius-sm)",
+                                        display: "block",
+                                        marginBottom: "0.5rem",
+                                        background: "var(--color-bg)",
+                                      }}
+                                    />
+                                    <div style={{ fontSize: "0.8125rem", fontWeight: 600, marginBottom: "0.25rem" }}>
+                                      {m.caption ? m.caption : "Sem legenda"}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeletePhoto(m.id)}
+                                      style={{
+                                        padding: "0.35rem 0.5rem",
+                                        fontSize: "0.8125rem",
+                                        fontWeight: 700,
+                                        background: "transparent",
+                                        border: "1px solid var(--color-error-muted)",
+                                        borderRadius: "var(--radius-sm)",
+                                        color: "var(--color-error)",
+                                        cursor: "pointer",
+                                        width: "100%",
+                                      }}
+                                    >
+                                      Excluir
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
         {activeTab === "payment" && (
           <div className="card" style={{ padding: "1.5rem", marginBottom: "1.5rem", maxWidth: 560 }}>
             <h2 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "1rem" }}>Pagamento</h2>
+            <InputField
+              label="Chave PIX"
+              value={form.pix_key}
+              onChange={(v) => setForm((f) => ({ ...f, pix_key: v }))}
+              placeholder="ex: chavepix@hotel.com"
+              hint="Essa chave será usada pelo bot nas mensagens de pagamento por PIX."
+            />
             <div style={{ marginBottom: "1.5rem" }}>
               <label
                 style={{

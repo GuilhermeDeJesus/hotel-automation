@@ -11,13 +11,11 @@ import { useTenant } from "../contexts/TenantContext";
 import type { ReservationsFilters as ReservationsFiltersType } from "../types/api";
 
 function defaultFilters(): ReservationsFiltersType {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(start.getDate() - 29);
-  return {
-    from: start.toISOString().slice(0, 10),
-    to: end.toISOString().slice(0, 10),
-  };
+  const toYMD = (d: Date) => d.toISOString().slice(0, 10);
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const end = new Date(now.getFullYear(), 11, 31);
+  return { from: toYMD(start), to: toYMD(end) };
 }
 
 export default function Reservations() {

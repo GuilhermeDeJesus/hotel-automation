@@ -20,6 +20,7 @@ from app.infrastructure.persistence.memory.reservation_repository_memory import 
 from app.infrastructure.cache.redis_repository import RedisRepository
 from app.infrastructure.ai.openai_client import OpenAIClient
 from app.infrastructure.logging.conversation_logger import ConversationLogger
+from app.infrastructure.persistence.sql.hotel_media_repository_sql import HotelMediaRepositorySQL
 from app.application.use_cases.cancel_reservation import CancelReservationUseCase
 from app.application.use_cases.checkin_via_whatsapp import CheckInViaWhatsAppUseCase
 from app.application.use_cases.create_reservation import CreateReservationUseCase
@@ -152,35 +153,36 @@ def get_conversation_use_case_memory() -> ConversationUseCase:
     ai_service = AIServiceMock(responses={})
     reservation_repo = ReservationRepositoryMemory()
     
-    # Simple in-memory cache
-    class InMemoryCache:
+    # In-memory cache de conversa (multi-tenant)
+    class InMemoryConversationCache:
         def __init__(self):
-            self.store = {}
-        
-        def get(self, key: str):
-            return self.store.get(key)
-        
-        def set(self, key: str, value, ttl_seconds: int = 3600):
-            self.store[key] = value
-        
-        def delete(self, key: str):
-            self.store.pop(key, None)
-        
-        def exists(self, key: str) -> bool:
-            return key in self.store
-        
-        def clear(self):
-            self.store.clear()
-    
-    cache_repository = InMemoryCache()
+            self.store: dict[str, object] = {}
+
+        def _key(self, hotel_id: str, phone: str) -> str:
+            return f"conversation:{hotel_id}:{phone}"
+
+        def get(self, hotel_id: str, phone: str):
+            return self.store.get(self._key(hotel_id, phone))
+
+        def set(
+            self,
+            hotel_id: str,
+            phone: str,
+            data: object,
+            ttl_seconds: int = 3600,
+        ):
+            # TTL não é aplicado no modo memória.
+            self.store[self._key(hotel_id, phone)] = data
+
+    cache_repository = InMemoryConversationCache()
     
     # Create mock context services for testing
     class MockContextService:
-        def get_context_for_phone(self, phone: str) -> str:
+        def get_context_for_phone(self, hotel_id: str, phone: str) -> str:
             return ""  # No context in test mode
 
     class MockHotelContextService:
-        def get_context(self) -> str:
+        def get_context(self, hotel_id=None) -> str:
             return ""  # No hotel context in test mode
     
     context_service = MockContextService()
@@ -211,6 +213,7 @@ def get_whatsapp_message_use_case() -> HandleWhatsAppMessageUseCase:
     reservation_repo = ReservationRepositorySQL(session)
     room_repo = RoomRepositorySQL(session)
     hotel_repo = HotelRepositorySQL(session)
+    hotel_media_repo = HotelMediaRepositorySQL(session)
 
     checkout_use_case = CheckoutViaWhatsAppUseCase(reservation_repository=reservation_repo)
     cancel_reservation_use_case = CancelReservationUseCase(reservation_repository=reservation_repo)
@@ -252,6 +255,7 @@ def get_whatsapp_message_use_case() -> HandleWhatsAppMessageUseCase:
         pre_checkin_use_case=pre_checkin_use_case,
         support_ticket_use_case=support_ticket_use_case,
         room_order_use_case=room_order_use_case,
+        hotel_media_repository=hotel_media_repo,
     )
 
 

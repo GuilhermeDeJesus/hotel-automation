@@ -8,7 +8,7 @@ and temporary data.
 import os
 import redis
 import json
-from typing import Any, Optional
+from typing import Any, Optional, overload
 
 from app.domain.repositories.cache_repository import CacheRepository
 from app.application.exceptions import CacheError
@@ -28,24 +28,6 @@ class RedisRepository(CacheRepository, ConversationCacheRepository):
     def _conversation_key(self, hotel_id: str, phone: str) -> str:
         """Generate a unique cache key for a hotel's conversation with a phone."""
         return f"conversation:{hotel_id}:{phone}"
-    
-    # Multi-tenant conversation cache methods
-    def get(self, hotel_id: str, phone: str) -> Optional[Any]:
-        key = self._conversation_key(hotel_id, phone)
-        try:
-            data = self.client.get(key)
-            if data:
-                return json.loads(data)
-            return None
-        except Exception as e:
-            raise CacheError(f"Failed to get conversation for hotel_id={hotel_id}, phone={phone}: {str(e)}")
-
-    def set(self, hotel_id: str, phone: str, value: Any, ttl_seconds: int = 3600) -> None:
-        key = self._conversation_key(hotel_id, phone)
-        try:
-            self.client.set(key, json.dumps(value), ex=ttl_seconds)
-        except Exception as e:
-            raise CacheError(f"Failed to set conversation for hotel_id={hotel_id}, phone={phone}: {str(e)}")
     
     def __init__(
         self,
@@ -90,37 +72,71 @@ class RedisRepository(CacheRepository, ConversationCacheRepository):
         except Exception as e:
             raise CacheError(f"Failed to connect to Redis: {str(e)}")
     
-    def get(self, key: str) -> Optional[Any]:
+    @overload
+    def get(self, key: str) -> Optional[Any]: ...
+
+    @overload
+    def get(self, hotel_id: str, phone: str) -> Optional[Any]: ...
+
+    def get(self, key_or_hotel_id: str, phone: str | None = None) -> Optional[Any]:
         """
         Retrieve value from cache.
         
         Args:
-            key: The cache key
+            key_or_hotel_id: The cache key (CacheRepository) OR hotel_id (ConversationCacheRepository)
+            phone: Optional phone to resolve conversation cache key
             
         Returns:
             Parsed JSON value, or None if not found
         """
         try:
+            key = (
+                self._conversation_key(key_or_hotel_id, phone)
+                if phone is not None
+                else key_or_hotel_id
+            )
             data = self.client.get(key)
             if data:
                 return json.loads(data)
             return None
         except Exception as e:
-            raise CacheError(f"Failed to get key '{key}': {str(e)}")
+            raise CacheError(f"Failed to get cache key '{key_or_hotel_id}': {str(e)}")
     
-    def set(self, key: str, value: Any, ttl_seconds: int = 3600) -> None:
+    @overload
+    def set(self, key: str, value: Any, ttl_seconds: int = 3600) -> None: ...
+
+    @overload
+    def set(
+        self, hotel_id: str, phone: str, data: Any, ttl_seconds: int = 3600
+    ) -> None: ...
+
+    def set(
+        self,
+        key_or_hotel_id: str,
+        value_or_phone: Any,
+        value: Any | None = None,
+        ttl_seconds: int = 3600,
+    ) -> None:
         """
         Store value in cache.
         
         Args:
-            key: The cache key
-            value: The value to cache
+            key_or_hotel_id: The cache key (CacheRepository) OR hotel_id (ConversationCacheRepository)
+            value_or_phone: The value to cache (CacheRepository) OR phone (ConversationCacheRepository)
+            value: The value to cache (only when using ConversationCacheRepository)
             ttl_seconds: Time to live in seconds (default 1 hour)
         """
         try:
-            self.client.set(key, json.dumps(value), ex=ttl_seconds)
+            if value is None:
+                key = key_or_hotel_id
+                payload = value_or_phone
+            else:
+                key = self._conversation_key(key_or_hotel_id, str(value_or_phone))
+                payload = value
+
+            self.client.set(key, json.dumps(payload), ex=ttl_seconds)
         except Exception as e:
-            raise CacheError(f"Failed to set key '{key}': {str(e)}")
+            raise CacheError(f"Failed to set cache key '{key_or_hotel_id}': {str(e)}")
     
     def delete(self, key: str) -> None:
         """

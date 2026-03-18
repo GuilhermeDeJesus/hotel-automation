@@ -107,6 +107,7 @@ export interface HotelConfig {
   pet_policy: string;
   child_policy: string;
   amenities: string;
+  pix_key: string | null;
   requires_payment_for_confirmation: boolean;
   allows_reservation_without_payment: boolean;
 }
@@ -118,6 +119,18 @@ export interface Room {
   daily_rate: number;
   max_guests: number;
   status: string;
+}
+
+export interface HotelMedia {
+  id: string;
+  hotel_id?: string;
+  scope: "HOTEL" | "ROOM";
+  room_number: string | null;
+  caption: string | null;
+  mime_type: string;
+  filename: string | null;
+  sort_order: number;
+  created_at: string | null;
 }
 
 export interface AuditEvent {

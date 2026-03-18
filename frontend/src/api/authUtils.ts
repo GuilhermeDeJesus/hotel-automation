@@ -1,5 +1,6 @@
 export function logoutUser() {
   localStorage.removeItem("auth_token");
+  localStorage.removeItem("selected_hotel_id");
   window.location.href = "/login";
 }
 

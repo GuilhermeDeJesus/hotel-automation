@@ -14,7 +14,10 @@ export default function Landing() {
 
         <nav className="landing-nav">
           <Link to="/login" className="landing-nav-link">
-            Entrar no SaaS
+            <span className="landing-cta-text">Entrar no SaaS</span>
+            <span className="landing-cta-icon" aria-hidden="true">
+              →
+            </span>
           </Link>
         </nav>
       </header>
@@ -33,7 +36,10 @@ export default function Landing() {
 
             <div className="landing-hero-actions">
               <Link to="/login" className="landing-cta-primary">
-                Entrar no SaaS
+              <span className="landing-cta-text">Entrar no SaaS</span>
+              <span className="landing-cta-icon" aria-hidden="true">
+                →
+              </span>
               </Link>
               <a
                 href="https://github.com"
@@ -130,7 +136,10 @@ export default function Landing() {
               </p>
             </div>
             <Link to="/login" className="landing-cta-primary">
-              Entrar no SaaS
+              <span className="landing-cta-text">Entrar no SaaS</span>
+              <span className="landing-cta-icon" aria-hidden="true">
+                →
+              </span>
             </Link>
           </div>
         </section>

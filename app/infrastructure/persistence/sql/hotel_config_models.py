@@ -20,6 +20,10 @@ class HotelConfigModel(Base):
     contact_email = Column(String(255), nullable=True)
     contact_phone = Column(String(50), nullable=True)
     
+    # Configurações de Pagamento (PIX)
+    # Chave usada para instruções/pagamentos via PIX (Fase 0).
+    pix_key = Column(String(255), nullable=True)
+    
     # Configurações de Check-in/Check-out
     default_checkin_time = Column(String(10), nullable=False, default="14:00")
     default_checkout_time = Column(String(10), nullable=False, default="12:00")

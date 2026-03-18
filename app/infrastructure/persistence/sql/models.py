@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Float, Date, ForeignKey, Text, Boolean, UniqueConstraint
+from sqlalchemy import Column, Integer, String, DateTime, Float, Date, ForeignKey, Text, Boolean, UniqueConstraint, LargeBinary
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
@@ -104,6 +104,13 @@ class ReservationModel(Base):
 class PaymentModel(Base):
     """Tabela de Pagamentos"""
     __tablename__ = "payments"
+    __table_args__ = (
+        UniqueConstraint(
+            "hotel_id",
+            "transaction_id",
+            name="uq_payments_hotel_transaction_id",
+        ),
+    )
 
     id = Column(String, primary_key=True)
     hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
@@ -113,7 +120,7 @@ class PaymentModel(Base):
     amount = Column(Float, nullable=False)
     status = Column(String(20), nullable=False, index=True, default="PENDING")
     payment_method = Column(String(50))
-    transaction_id = Column(String(255), unique=True)
+    transaction_id = Column(String(255))
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.now, nullable=False)
@@ -142,6 +149,31 @@ class HotelModel(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     requires_payment_for_confirmation = Column(Boolean, default=False, nullable=False)
     allows_reservation_without_payment = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class HotelMediaModel(Base):
+    """Mídias (fotos) do hotel e por quarto (por número de quarto)."""
+
+    __tablename__ = "hotel_media"
+
+    id = Column(String, primary_key=True)
+    hotel_id = Column(String, ForeignKey("hotels.id"), nullable=False, index=True)
+
+    # "hotel" (hotel geral) ou "room" (fotos por quarto)
+    scope = Column(String(20), nullable=False, index=True)
+    room_number = Column(String(10), nullable=True, index=True)
+
+    caption = Column(String(255), nullable=True)
+    sort_order = Column(Integer, nullable=False, default=0, index=True)
+    mime_type = Column(String(100), nullable=False)
+    filename = Column(String(255), nullable=True)
+
+    data = Column(LargeBinary, nullable=False)
+
+    is_active = Column(Boolean, default=True, nullable=False)
+
     created_at = Column(DateTime, default=datetime.now, nullable=False)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 

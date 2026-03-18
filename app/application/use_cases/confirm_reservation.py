@@ -17,7 +17,7 @@ class ConfirmReservationUseCase:
         reservation = self.reservation_repository.find_by_phone_number(request_dto.phone, hotel_id)
         if not reservation:
             return ConfirmReservationResponseDTO(
-                message="Reserva nao encontrada para este telefone.",
+                message="Reserva não encontrada para este telefone.",
                 success=False,
             )
 
@@ -27,14 +27,14 @@ class ConfirmReservationUseCase:
             ReservationStatus.CHECKED_OUT,
         ]:
             return ConfirmReservationResponseDTO(
-                message=f"Reserva nao pode ser confirmada. Status atual: {reservation.status.name}.",
+                message=f"Reserva não pode ser confirmada. Status atual: {reservation.status.name}.",
                 success=False,
                 status=reservation.status.name,
             )
 
         if reservation.status == ReservationStatus.CONFIRMED:
             return ConfirmReservationResponseDTO(
-                message="Reserva ja esta confirmada.",
+                message="Reserva já está confirmada.",
                 success=True,
                 can_confirm=False,
                 status=reservation.status.name,
@@ -42,7 +42,7 @@ class ConfirmReservationUseCase:
 
         summary = self._build_summary(reservation)
         return ConfirmReservationResponseDTO(
-            message="Deseja confirmar esta reserva? Responda com SIM ou NAO.",
+            message="Deseja confirmar esta reserva? Responda com SIM ou NÃO.",
             success=True,
             can_confirm=True,
             summary=summary,
@@ -53,7 +53,7 @@ class ConfirmReservationUseCase:
         reservation = self.reservation_repository.find_by_phone_number(request_dto.phone, hotel_id)
         if not reservation:
             return ConfirmReservationResponseDTO(
-                message="Reserva nao encontrada para este telefone.",
+                message="Reserva não encontrada para este telefone.",
                 success=False,
             )
 
@@ -63,14 +63,14 @@ class ConfirmReservationUseCase:
             ReservationStatus.CHECKED_OUT,
         ]:
             return ConfirmReservationResponseDTO(
-                message=f"Reserva nao pode ser confirmada. Status atual: {reservation.status.name}.",
+                message=f"Reserva não pode ser confirmada. Status atual: {reservation.status.name}.",
                 success=False,
                 status=reservation.status.name,
             )
 
         if reservation.status == ReservationStatus.CONFIRMED:
             return ConfirmReservationResponseDTO(
-                message="Reserva ja estava confirmada.",
+                message="Reserva já estava confirmada.",
                 success=True,
                 can_confirm=False,
                 status=reservation.status.name,

@@ -21,6 +21,7 @@ class UpdateHotelConfigUseCase:
         pet_policy: str | None = None,
         child_policy: str | None = None,
         amenities: str | None = None,
+        pix_key: str | None = None,
         requires_payment_for_confirmation: bool | None = None,
         allows_reservation_without_payment: bool | None = None,
     ) -> dict:
@@ -38,6 +39,10 @@ class UpdateHotelConfigUseCase:
             hotel.requires_payment_for_confirmation = requires_payment_for_confirmation
         if allows_reservation_without_payment is not None:
             hotel.allows_reservation_without_payment = allows_reservation_without_payment
+
+        # PIX key is stored in hotel_configs (not in hotels table).
+        if pix_key is not None:
+            hotel.pix_key = pix_key
 
         if any(
             x is not None

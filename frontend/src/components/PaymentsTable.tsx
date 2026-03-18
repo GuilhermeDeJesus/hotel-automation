@@ -1,4 +1,5 @@
 import type { Payment, PaymentStatusType } from "../types/api";
+import TableScroll from "./ui/TableScroll";
 
 interface PaymentsTableProps {
   payments: Payment[];
@@ -73,7 +74,7 @@ export default function PaymentsTable({
 }: PaymentsTableProps) {
   return (
     <div className="card" style={{ overflow: "hidden" }}>
-      <div style={{ overflowX: "auto" }}>
+      <TableScroll>
         <table
           style={{
             width: "100%",
@@ -232,7 +233,7 @@ export default function PaymentsTable({
             )}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
     </div>
   );
 }

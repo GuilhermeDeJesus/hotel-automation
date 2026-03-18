@@ -17,6 +17,7 @@ class HotelConfigRequest(BaseModel):
     hotel_description: Optional[str] = None
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
+    pix_key: Optional[str] = None
     default_checkin_time: Optional[str] = None
     default_checkout_time: Optional[str] = None
     early_checkin_fee: Optional[float] = None
@@ -165,6 +166,7 @@ def get_hotel_config(
             "hotel_description": config.hotel_description,
             "contact_email": config.contact_email,
             "contact_phone": config.contact_phone,
+            "pix_key": config.pix_key,
             "default_checkin_time": config.default_checkin_time,
             "default_checkout_time": config.default_checkout_time,
             "early_checkin_fee": config.early_checkin_fee,

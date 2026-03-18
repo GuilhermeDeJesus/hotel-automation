@@ -1,0 +1,211 @@
+hotel_automation_api  | INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+hotel_automation_api  | INFO  [alembic.runtime.migration] Will assume transactional DDL.
+hotel_automation_api  | INFO:     Started server process [8]
+hotel_automation_api  | INFO:     Waiting for application startup.
+hotel_automation_api  | INFO:     Application startup complete.
+hotel_automation_api  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+hotel_automation_api  | INFO:     127.0.0.1:54916 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:58846 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:45310 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (33, null, 556198776092, twilio, inbound_message, t, null, {"message_sid": "SM322e7abd54c2ee130994907844ec3082"}, 2026-03-18 18:31:34.725614).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'inbound_message', 'success': True, 'response_time_ms': None, 'details': '{"message_sid": "SM322e7abd54c2ee130994907844ec3082"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 31, 34, 725614)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (34, null, 556198776092, twilio, outbound_message, t, 429, {"message_sid": "SM322e7abd54c2ee130994907844ec3082"}, 2026-03-18 18:31:35.170646).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'outbound_message', 'success': True, 'response_time_ms': 429, 'details': '{"message_sid": "SM322e7abd54c2ee130994907844ec3082"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 31, 35, 170646)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | INFO:     172.19.0.6:55642 - "POST /webhook/whatsapp/twilio HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:39016 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:37996 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:47826 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:54590 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (35, null, 556198776092, twilio, inbound_message, t, null, {"message_sid": "SM32c2bf1bec8831e1df45ab0dad70d409"}, 2026-03-18 18:32:59.209963).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'inbound_message', 'success': True, 'response_time_ms': None, 'details': '{"message_sid": "SM32c2bf1bec8831e1df45ab0dad70d409"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 32, 59, 209963)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (36, null, 556198776092, twilio, outbound_message, t, 235, {"message_sid": "SM32c2bf1bec8831e1df45ab0dad70d409"}, 2026-03-18 18:32:59.452556).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'outbound_message', 'success': True, 'response_time_ms': 235, 'details': '{"message_sid": "SM32c2bf1bec8831e1df45ab0dad70d409"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 32, 59, 452556)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | INFO:     172.19.0.6:58240 - "POST /webhook/whatsapp/twilio HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:57426 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:58592 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:40918 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (37, null, 556198776092, twilio, inbound_message, t, null, {"message_sid": "SMff206cfffd28fe3837a7cd067e11640c"}, 2026-03-18 18:34:04.355407).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'inbound_message', 'success': True, 'response_time_ms': None, 'details': '{"message_sid": "SMff206cfffd28fe3837a7cd067e11640c"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 34, 4, 355407)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (38, null, 556198776092, twilio, outbound_message, t, 278, {"message_sid": "SMff206cfffd28fe3837a7cd067e11640c"}, 2026-03-18 18:34:04.6458).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'outbound_message', 'success': True, 'response_time_ms': 278, 'details': '{"message_sid": "SMff206cfffd28fe3837a7cd067e11640c"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 34, 4, 645800)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | INFO:     172.19.0.6:35226 - "POST /webhook/whatsapp/twilio HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:56172 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (39, null, 556198776092, twilio, inbound_message, t, null, {"message_sid": "SMcf642fce0960fba763064f3e8b948290"}, 2026-03-18 18:34:17.417251).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'inbound_message', 'success': True, 'response_time_ms': None, 'details': '{"message_sid": "SMcf642fce0960fba763064f3e8b948290"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 34, 17, 417251)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (40, null, 556198776092, twilio, outbound_message, t, 231, {"message_sid": "SMcf642fce0960fba763064f3e8b948290"}, 2026-03-18 18:34:17.656708).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'outbound_message', 'success': True, 'response_time_ms': 231, 'details': '{"message_sid": "SMcf642fce0960fba763064f3e8b948290"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 34, 17, 656708)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | INFO:     172.19.0.6:52698 - "POST /webhook/whatsapp/twilio HTTP/1.1" 200 OK
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (41, null, 556198776092, twilio, inbound_message, t, null, {"message_sid": "SMe09145e46ae62d6290174dea5280dcc2"}, 2026-03-18 18:34:25.941256).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'inbound_message', 'success': True, 'response_time_ms': None, 'details': '{"message_sid": "SMe09145e46ae62d6290174dea5280dcc2"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 34, 25, 941256)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (42, null, 556198776092, twilio, outbound_message, t, 244, {"message_sid": "SMe09145e46ae62d6290174dea5280dcc2"}, 2026-03-18 18:34:26.19664).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'outbound_message', 'success': True, 'response_time_ms': 244, 'details': '{"message_sid": "SMe09145e46ae62d6290174dea5280dcc2"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 34, 26, 196640)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | INFO:     172.19.0.6:49662 - "POST /webhook/whatsapp/twilio HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:57294 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (43, null, 556198776092, twilio, inbound_message, t, null, {"message_sid": "SM58d7e725f40ce5d930797783ca0025b0"}, 2026-03-18 18:34:38.210488).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'inbound_message', 'success': True, 'response_time_ms': None, 'details': '{"message_sid": "SM58d7e725f40ce5d930797783ca0025b0"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 34, 38, 210488)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (44, null, 556198776092, twilio, outbound_message, t, 278, {"message_sid": "SM58d7e725f40ce5d930797783ca0025b0"}, 2026-03-18 18:34:38.496767).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'outbound_message', 'success': True, 'response_time_ms': 278, 'details': '{"message_sid": "SM58d7e725f40ce5d930797783ca0025b0"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 34, 38, 496767)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | INFO:     172.19.0.6:58674 - "POST /webhook/whatsapp/twilio HTTP/1.1" 200 OK
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (45, null, 556198776092, twilio, inbound_message, t, null, {"message_sid": "SMe604e0ac853f6dbaea06c9329a894710"}, 2026-03-18 18:34:49.157685).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'inbound_message', 'success': True, 'response_time_ms': None, 'details': '{"message_sid": "SMe604e0ac853f6dbaea06c9329a894710"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 34, 49, 157685)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (46, null, 556198776092, twilio, outbound_message, t, 232, {"message_sid": "SMe604e0ac853f6dbaea06c9329a894710"}, 2026-03-18 18:34:49.397543).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'outbound_message', 'success': True, 'response_time_ms': 232, 'details': '{"message_sid": "SMe604e0ac853f6dbaea06c9329a894710"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 34, 49, 397543)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | INFO:     172.19.0.6:50070 - "POST /webhook/whatsapp/twilio HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:47492 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (47, null, 556198776092, twilio, inbound_message, t, null, {"message_sid": "SM555587dcb39c1165682f70d576ca1992"}, 2026-03-18 18:34:57.4566).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'inbound_message', 'success': True, 'response_time_ms': None, 'details': '{"message_sid": "SM555587dcb39c1165682f70d576ca1992"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 34, 57, 456600)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (48, null, 556198776092, twilio, outbound_message, t, 225, {"message_sid": "SM555587dcb39c1165682f70d576ca1992"}, 2026-03-18 18:34:57.689701).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'outbound_message', 'success': True, 'response_time_ms': 225, 'details': '{"message_sid": "SM555587dcb39c1165682f70d576ca1992"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 34, 57, 689701)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | INFO:     172.19.0.6:33050 - "POST /webhook/whatsapp/twilio HTTP/1.1" 200 OK
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (49, null, 556198776092, twilio, inbound_message, t, null, {"message_sid": "SMaba0098d0a0ee15ff4636f70706280b2"}, 2026-03-18 18:35:03.721718).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'inbound_message', 'success': True, 'response_time_ms': None, 'details': '{"message_sid": "SMaba0098d0a0ee15ff4636f70706280b2"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 35, 3, 721718)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (50, null, 556198776092, twilio, outbound_message, t, 238, {"message_sid": "SMaba0098d0a0ee15ff4636f70706280b2"}, 2026-03-18 18:35:03.968868).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'outbound_message', 'success': True, 'response_time_ms': 238, 'details': '{"message_sid": "SMaba0098d0a0ee15ff4636f70706280b2"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 35, 3, 968868)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | INFO:     172.19.0.6:33250 - "POST /webhook/whatsapp/twilio HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:51318 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:59088 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:39594 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:38230 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:47126 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:58904 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (51, null, 556198776092, twilio, inbound_message, t, null, {"message_sid": "SM316a6d9c3527c5304d5d4d08d1b33f03"}, 2026-03-18 18:37:14.908921).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'inbound_message', 'success': True, 'response_time_ms': None, 'details': '{"message_sid": "SM316a6d9c3527c5304d5d4d08d1b33f03"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 37, 14, 908921)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (52, null, 556198776092, twilio, outbound_message, t, 244, {"message_sid": "SM316a6d9c3527c5304d5d4d08d1b33f03"}, 2026-03-18 18:37:15.161629).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'outbound_message', 'success': True, 'response_time_ms': 244, 'details': '{"message_sid": "SM316a6d9c3527c5304d5d4d08d1b33f03"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 37, 15, 161629)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | INFO:     172.19.0.6:49512 - "POST /webhook/whatsapp/twilio HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:37330 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (53, null, 556198776092, twilio, inbound_message, t, null, {"message_sid": "SMa382eb2d8b84b084cc85fbd9e748d088"}, 2026-03-18 18:37:28.037878).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'inbound_message', 'success': True, 'response_time_ms': None, 'details': '{"message_sid": "SMa382eb2d8b84b084cc85fbd9e748d088"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 37, 28, 37878)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (54, null, 556198776092, twilio, outbound_message, t, 253, {"message_sid": "SMa382eb2d8b84b084cc85fbd9e748d088"}, 2026-03-18 18:37:28.299025).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'outbound_message', 'success': True, 'response_time_ms': 253, 'details': '{"message_sid": "SMa382eb2d8b84b084cc85fbd9e748d088"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 37, 28, 299025)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | INFO:     172.19.0.6:46174 - "POST /webhook/whatsapp/twilio HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:54218 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (55, null, 556198776092, twilio, inbound_message, t, null, {"message_sid": "SM52bfe6bc6362f167a348497f32c7cf6e"}, 2026-03-18 18:37:49.07165).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'inbound_message', 'success': True, 'response_time_ms': None, 'details': '{"message_sid": "SM52bfe6bc6362f167a348497f32c7cf6e"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 37, 49, 71650)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | WARNING:app.interfaces.api.whatsapp_webhook:⚠️ Falha ao registrar evento SaaS: (psycopg2.errors.NotNullViolation) null value in column "hotel_id" of relation "saas_analytics_events" violates not-null constraint
+hotel_automation_api  | DETAIL:  Failing row contains (56, null, 556198776092, twilio, outbound_message, t, 245, {"message_sid": "SM52bfe6bc6362f167a348497f32c7cf6e"}, 2026-03-18 18:37:49.325122).
+hotel_automation_api  | 
+hotel_automation_api  | [SQL: INSERT INTO saas_analytics_events (hotel_id, phone_number, source, event_type, success, response_time_ms, details, created_at) VALUES (%(hotel_id)s, %(phone_number)s, %(source)s, %(event_type)s, %(success)s, %(response_time_ms)s, %(details)s, %(created_at)s) RETURNING saas_analytics_events.id]
+hotel_automation_api  | [parameters: {'hotel_id': None, 'phone_number': '556198776092', 'source': 'twilio', 'event_type': 'outbound_message', 'success': True, 'response_time_ms': 245, 'details': '{"message_sid": "SM52bfe6bc6362f167a348497f32c7cf6e"}', 'created_at': datetime.datetime(2026, 3, 18, 18, 37, 49, 325122)}]
+hotel_automation_api  | (Background on this error at: https://sqlalche.me/e/20/gkpj)
+hotel_automation_api  | INFO:     172.19.0.6:40424 - "POST /webhook/whatsapp/twilio HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:37828 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:33936 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:33088 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:58736 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:59956 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:37674 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:49848 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:53424 - "GET /health HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     172.19.0.1:56662 - "OPTIONS /api/auth/login HTTP/1.1" 200 OK
+hotel_automation_api  | WARNING:auth:[LOGIN] Tentativa: email=admin@montanha.com
+hotel_automation_api  | WARNING:auth:[LOGIN] Usuário encontrado: True
+hotel_automation_api  | WARNING:auth:[LOGIN] Hash: $2b$12$Ch/fkfuhQh3as...
+hotel_automation_api  | WARNING:auth:[LOGIN] Senha verificada: True
+hotel_automation_api  | /usr/local/lib/python3.11/site-packages/jwt/api_jwt.py:147: InsecureKeyLengthWarning: The HMAC key is 11 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
+hotel_automation_api  |   return self._jws.encode(
+hotel_automation_api  | WARNING:auth:[LOGIN] SUCESSO para admin@montanha.com
+hotel_automation_api  | INFO:     172.19.0.1:56662 - "POST /api/auth/login HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     172.19.0.1:56662 - "OPTIONS /saas/kpis/compare?from=2026-03-12&to=2026-03-18&granularity=day HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     172.19.0.1:56674 - "OPTIONS /dashboard/hotel/list HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     172.19.0.1:56680 - "OPTIONS /config/hotel/hotel-montanha-002/config HTTP/1.1" 200 OK
+hotel_automation_api  | /usr/local/lib/python3.11/site-packages/jwt/api_jwt.py:365: InsecureKeyLengthWarning: The HMAC key is 11 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
+hotel_automation_api  |   decoded = self.decode_complete(
+hotel_automation_api  | INFO:     172.19.0.1:56674 - "GET /config/hotel/hotel-montanha-002/config HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     172.19.0.1:56680 - "GET /dashboard/hotel/list HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     172.19.0.1:56662 - "GET /saas/kpis/compare?from=2026-03-12&to=2026-03-18&granularity=day HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     172.19.0.1:56662 - "OPTIONS /saas/reservations?from=2026-02-17&to=2026-03-18&limit=100 HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     172.19.0.1:56662 - "GET /saas/reservations?from=2026-02-17&to=2026-03-18&limit=100 HTTP/1.1" 200 OK
+hotel_automation_api  | INFO:     127.0.0.1:54832 - "GET /health HTTP/1.1" 200 OK

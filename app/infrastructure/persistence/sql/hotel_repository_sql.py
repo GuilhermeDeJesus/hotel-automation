@@ -4,6 +4,7 @@ from app.domain.entities.hotel.hotel import Hotel
 from app.domain.entities.hotel.policies import HotelPolicies
 from app.domain.repositories.hotel_repository import HotelRepository
 from app.infrastructure.persistence.sql.models import HotelModel
+from app.infrastructure.persistence.sql.hotel_config_models import HotelConfigModel
 
 
 class HotelRepositorySQL(HotelRepository):
@@ -26,6 +27,13 @@ class HotelRepositorySQL(HotelRepository):
             child_policy=model.child_policy,
             amenities=model.amenities,
         )
+        config = (
+            self.session.query(HotelConfigModel)
+            .filter_by(hotel_id=str(model.id))
+            .first()
+        )
+        pix_key = getattr(config, "pix_key", None) if config else None
+
         return Hotel(
             hotel_id=str(model.id),
             name=model.name,
@@ -39,6 +47,7 @@ class HotelRepositorySQL(HotelRepository):
             allows_reservation_without_payment=getattr(
                 model, "allows_reservation_without_payment", True
             ),
+            pix_key=pix_key,
         )
 
     def save(self, hotel_id: str, hotel: Hotel) -> None:
@@ -86,5 +95,23 @@ class HotelRepositorySQL(HotelRepository):
                 ),
             )
             self.session.add(new_row)
+
+        # Persist PIX key in hotel_configs table when present in domain entity.
+        # Hotel domain loads pix_key from HotelConfigModel, so we keep it in sync here.
+        if getattr(hotel, "pix_key", None) is not None:
+            config = (
+                self.session.query(HotelConfigModel)
+                .filter_by(hotel_id=str(hotel.id or hotel_id))
+                .first()
+            )
+            if not config:
+                config = HotelConfigModel(
+                    hotel_id=str(hotel.id or hotel_id),
+                    hotel_name=hotel.name,
+                    updated_by="system",
+                )
+                self.session.add(config)
+
+            config.pix_key = hotel.pix_key
 
         self.session.commit()

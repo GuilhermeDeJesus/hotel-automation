@@ -6,24 +6,26 @@ interface ReservationsFiltersProps {
   onChange: (filters: ReservationsFiltersType) => void;
 }
 
-function defaultDateRange() {
-  const end = new Date();
-  const start = new Date();
-  start.setDate(start.getDate() - 29);
-  return {
-    from: start.toISOString().slice(0, 10),
-    to: end.toISOString().slice(0, 10),
-  };
-}
-
 function toYMD(d: Date) {
   return d.toISOString().slice(0, 10);
+}
+
+function currentYearDateRange() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const end = new Date(now.getFullYear(), 11, 31);
+  return { from: toYMD(start), to: toYMD(end) };
+}
+
+function defaultDateRange() {
+  return currentYearDateRange();
 }
 
 const PERIOD_SHORTCUTS = [
   { label: "Hoje", getRange: () => { const t = new Date(); return { from: toYMD(t), to: toYMD(t) }; } },
   { label: "7 dias", getRange: () => { const end = new Date(); const start = new Date(); start.setDate(start.getDate() - 6); return { from: toYMD(start), to: toYMD(end) }; } },
   { label: "30 dias", getRange: () => { const end = new Date(); const start = new Date(); start.setDate(start.getDate() - 29); return { from: toYMD(start), to: toYMD(end) }; } },
+  { label: "Ano todo", getRange: () => currentYearDateRange() },
   {
     label: "Este mês",
     getRange: () => {

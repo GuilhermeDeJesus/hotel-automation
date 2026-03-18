@@ -52,6 +52,7 @@ class HotelConfigService:
         # Atualizar campos permitidos
         updatable_fields = [
             'hotel_name', 'hotel_description', 'contact_email', 'contact_phone',
+            'pix_key',
             'default_checkin_time', 'default_checkout_time', 'early_checkin_fee', 'late_checkout_fee',
             'cancellation_policy_hours', 'cancellation_fee_percentage', 'free_cancellation_hours',
             'requires_payment_for_confirmation', 'payment_methods', 'payment_deadline_hours',

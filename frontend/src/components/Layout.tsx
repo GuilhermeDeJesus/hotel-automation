@@ -72,7 +72,7 @@ export default function Layout({ children }: LayoutProps) {
     }
     setCacheLoading(true);
     try {
-      const res = await invalidateCache();
+      const res = await invalidateCache(hotelId || undefined);
       showToast(`Cache invalidado (${res.deleted_keys} chaves). Recarregando...`, "success");
       setTimeout(() => window.location.reload(), 800);
     } catch (e) {
@@ -95,40 +95,27 @@ export default function Layout({ children }: LayoutProps) {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex" }}>
+    <div className="app-shell">
       {/* Sidebar overlay (mobile) */}
       {isMobile && sidebarOpen && (
         <div
+          className="mobile-backdrop"
           role="button"
           tabIndex={0}
           onClick={() => setSidebarOpen(false)}
           onKeyDown={(e) => e.key === "Escape" && setSidebarOpen(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.5)",
-            zIndex: 40,
-          }}
           aria-label="Fechar menu"
         />
       )}
       {/* Sidebar */}
       <aside
-        style={{
-          width: "var(--sidebar-width)",
-          minWidth: "var(--sidebar-width)",
-          background: "var(--color-bg-elevated)",
-          borderRight: "1px solid var(--color-border)",
-          padding: "1.5rem 0",
-          position: isMobile ? "fixed" : "sticky",
-          top: 0,
-          height: "100vh",
-          zIndex: 50,
-          transform: isMobile && !sidebarOpen ? "translateX(-100%)" : "translateX(0)",
-          transition: "transform 0.2s ease",
-          display: "flex",
-          flexDirection: "column",
-        }}
+        className={[
+          "app-sidebar",
+          isMobile ? "app-sidebar--mobile" : "app-sidebar--desktop",
+          isMobile ? (sidebarOpen ? "sidebar--open" : "sidebar--closed") : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
       >
         <div style={{ padding: "0 1.25rem", marginBottom: "2rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
@@ -172,6 +159,7 @@ export default function Layout({ children }: LayoutProps) {
               <Link
                 key={item.path}
                 to={item.path}
+                className="app-nav-link"
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -208,22 +196,14 @@ export default function Layout({ children }: LayoutProps) {
       </aside>
 
       {/* Main content */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-        <header
-          style={{
-            background: "var(--color-bg-elevated)",
-            borderBottom: "1px solid var(--color-border)",
-            padding: "1rem 2rem",
-            position: "sticky",
-            top: 0,
-            zIndex: 10,
-          }}
-        >
+      <div className="app-main">
+        <header className="app-topbar">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", flexWrap: "wrap" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
               {isMobile && (
                 <button
                   type="button"
+                  className="app-icon-button"
                   onClick={() => setSidebarOpen(true)}
                   aria-label="Abrir menu"
                   style={{
@@ -242,6 +222,7 @@ export default function Layout({ children }: LayoutProps) {
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
                   <div style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>Selecionar hotel</div>
                   <select
+                    className="app-hotel-select"
                     value={hotelId || ""}
                     onChange={(e) => {
                       const value = e.target.value || null;
@@ -284,6 +265,7 @@ export default function Layout({ children }: LayoutProps) {
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <button
                 type="button"
+                className="app-topbar-button"
                 onClick={toggleTheme}
                 aria-label={theme === "dark" ? "Modo claro" : "Modo escuro"}
                 title={theme === "dark" ? "Modo claro" : "Modo escuro"}
@@ -300,6 +282,7 @@ export default function Layout({ children }: LayoutProps) {
               </button>
               <button
                 type="button"
+                className="app-topbar-button"
                 onClick={handleInvalidateCache}
                 disabled={cacheLoading}
                 title="Invalidar cache e recarregar dados"
@@ -323,6 +306,7 @@ export default function Layout({ children }: LayoutProps) {
               </button>
               <button
                 type="button"
+                className="app-topbar-button app-topbar-button--danger"
                 onClick={logoutUser}
                 style={{
                   padding: "0.5rem 0.875rem",
@@ -340,7 +324,7 @@ export default function Layout({ children }: LayoutProps) {
             </div>
           </div>
         </header>
-        <main style={{ flex: 1, padding: "2rem", overflow: "auto" }}>{children}</main>
+        <main className="app-content">{children}</main>
       </div>
     </div>
   );

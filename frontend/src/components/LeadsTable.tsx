@@ -1,4 +1,5 @@
 import type { Lead } from "../types/api";
+import TableScroll from "./ui/TableScroll";
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -58,7 +59,7 @@ function StageBadge({ stage }: { stage: string }) {
 export default function LeadsTable({ leads }: LeadsTableProps) {
   return (
     <div className="card" style={{ overflow: "hidden" }}>
-      <div style={{ overflowX: "auto" }}>
+      <TableScroll>
         <table
           style={{
             width: "100%",
@@ -144,7 +145,7 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
             )}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
     </div>
   );
 }

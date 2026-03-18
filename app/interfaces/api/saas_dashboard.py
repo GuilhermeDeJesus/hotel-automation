@@ -4495,6 +4495,7 @@ def repair_audit_metrics_snapshot_gaps(
 def invalidate_cache(
     request: Request,
     x_admin_token: str | None = Header(default=None, alias="X-Admin-Token"),
+    x_hotel_id: str | None = Header(default=None, alias="X-Hotel-Id"),
     use_case: GetSaaSDashboardUseCase = Depends(get_saas_dashboard_use_case),
 ):
     client_ip = request.client.host if request.client else "unknown"
@@ -4533,7 +4534,8 @@ def invalidate_cache(
         )
 
     deleted_keys = GetSaaSDashboardUseCase.invalidate_analytics_cache(
-        use_case.cache_repository
+        use_case.cache_repository,
+        hotel_id=x_hotel_id,
     )
     _audit_cache_invalidate(client_ip, outcome="success", deleted_keys=deleted_keys)
     return {
@@ -4549,8 +4551,15 @@ def get_kpis(
     status: str | None = Query(default=None),
     granularity: str | None = Query(default="day"),
     use_case: GetSaaSDashboardUseCase = Depends(get_saas_dashboard_use_case),
+    user: UserModel = Depends(get_current_user),
+    x_hotel_id: str | None = Header(default=None, alias="X-Hotel-Id"),
 ):
+    effective_hotel_id = _resolve_effective_hotel_id(user, x_hotel_id)
+    if not effective_hotel_id:
+        raise HTTPException(status_code=403, detail="Usuário sem hotel associado")
+
     return use_case.get_kpis(
+        effective_hotel_id,
         from_date,
         to_date,
         source=source,
@@ -4632,6 +4641,7 @@ def get_timeseries(
         raise HTTPException(status_code=403, detail="Usuário sem hotel associado")
 
     return use_case.get_timeseries(
+        effective_hotel_id,
         from_date,
         to_date,
         source=source,
@@ -4656,6 +4666,7 @@ def get_kpis_comparison(
         raise HTTPException(status_code=403, detail="Usuário sem hotel associado")
 
     return use_case.get_kpis_comparison(
+        effective_hotel_id,
         from_date,
         to_date,
         source=source,

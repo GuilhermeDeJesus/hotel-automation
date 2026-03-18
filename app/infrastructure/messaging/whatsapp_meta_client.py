@@ -94,6 +94,52 @@ class WhatsAppMetaClient:
             logger.error(f"❌ Erro desconhecido: {str(e)}")
             return {"success": False, "error": str(e)}
 
+    def send_image_message(
+        self,
+        to_phone: str,
+        message: str,
+        media_url: str,
+    ) -> Dict[str, Any]:
+        """
+        Envia mensagem de imagem via WhatsApp (Meta Cloud API).
+
+        Observação: 'message' vai como caption.
+        """
+        to_phone = self._format_phone(to_phone)
+
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to_phone,
+            "type": "image",
+            "image": {"link": media_url},
+            "caption": message or "",
+        }
+
+        try:
+            response = requests.post(
+                f"{self.api_url}/messages",
+                json=payload,
+                headers=self.headers,
+                timeout=10,
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                message_id = data.get("messages", [{}])[0].get("id")
+                logger.info(f"✅ Mensagem com imagem enviada para {to_phone}: {message_id}")
+                return {"success": True, "message_id": message_id, "data": data}
+            else:
+                error_msg = response.text
+                logger.error(f"❌ Erro ao enviar imagem para {to_phone}: {error_msg}")
+                return {"success": False, "error": error_msg, "status_code": response.status_code}
+        except requests.exceptions.Timeout:
+            logger.error(f"❌ Timeout ao enviar imagem para {to_phone}")
+            return {"success": False, "error": "Timeout"}
+        except Exception as e:
+            logger.error(f"❌ Erro desconhecido ao enviar imagem: {str(e)}")
+            return {"success": False, "error": str(e)}
+
     def send_template_message(
         self,
         to_phone: str,

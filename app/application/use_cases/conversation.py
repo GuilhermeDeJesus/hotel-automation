@@ -10,7 +10,7 @@ Coordinates between:
 from typing import Optional, List
 
 from app.domain.value_objects.message import Message
-from app.domain.repositories.cache_repository import CacheRepository
+from app.domain.repositories.conversation_cache_repository import ConversationCacheRepository
 from app.domain.repositories.reservation_repository import ReservationRepository
 from app.application.services.ai_service import AIService
 from app.application.services.interaction_logger import InteractionLogger
@@ -31,7 +31,7 @@ class ConversationUseCase:
         self,
         ai_service: AIService,
         reservation_repo: ReservationRepository,
-        cache_repository: CacheRepository,
+        cache_repository: ConversationCacheRepository,
         context_service: ReservationContextService,
         hotel_context_service: HotelContextService,
         messaging: Optional[object] = None,
@@ -43,7 +43,7 @@ class ConversationUseCase:
         Args:
             ai_service: AIService implementation (e.g., OpenAIClient)
             reservation_repo: Repository for accessing reservations
-            cache_repository: CacheRepository for conversation history
+            cache_repository: ConversationCacheRepository for conversation history
             context_service: ReservationContextService for fetching guest context
             hotel_context_service: HotelContextService for hotel information
             messaging: Optional messaging provider for sending responses
@@ -91,7 +91,7 @@ class ConversationUseCase:
             messages.append(user_message)
 
             # Call AI with conversation history and reservation context
-            ai_response = self._call_ai(messages, phone)
+            ai_response = self._call_ai(hotel_id, messages, phone)
 
             # Create and add assistant message
             assistant_message = Message(role="assistant", content=ai_response)
@@ -130,7 +130,9 @@ class ConversationUseCase:
         except Exception as e:
             raise CacheError(f"Failed to retrieve conversation history: {str(e)}")
 
-    def _call_ai(self, messages: List[Message], phone: str = None) -> str:
+    def _call_ai(
+        self, hotel_id: str, messages: List[Message], phone: str = None
+    ) -> str:
         """
         Call AI service with message history and hotel/reservation context.
         
@@ -147,11 +149,14 @@ class ConversationUseCase:
             
             # Prepend hotel and reservation context if available
             system_message = "Você é um assistente de hotel prestativo e profissional. Responde às mensagens dos hóspedes de forma clara e amigável. Sempre que possível, utilize as informações da reserva e do hotel para fornecer respostas personalizadas e úteis. Não pergunte por número de noites, sempre peça por datas de checkin e checkout. Responsa de forma mais humanizada possível, não seja um robô, seja um atendente humano. Se o hóspede fornecer datas de checkin e checkout, responda com a disponibilidade e preços para esse período, e ofereça opções de quartos. Se o hóspede perguntar sobre serviços do hotel, forneça informações detalhadas sobre os serviços disponíveis, como café da manhã, piscina, academia, etc. Se o hóspede tiver uma reserva existente, utilize as informações da reserva para responder às perguntas de forma personalizada."
-            hotel_context = self.hotel_context_service.get_context()
+            hotel_context = self.hotel_context_service.get_context(hotel_id)
             if hotel_context:
                 system_message += f"\n\n{hotel_context}"
             if phone:
-                reservation_context = self.context_service.get_context_for_phone(phone)
+                # ReservationContextService expects (hotel_id, phone_number).
+                reservation_context = self.context_service.get_context_for_phone(
+                    hotel_id, phone
+                )
                 if reservation_context:
                     system_message += f"\n\n{reservation_context}"
             

@@ -16,6 +16,7 @@ from app.interfaces.api.payments import router as payments_router
 from app.interfaces.api.rooms import router as rooms_router
 from app.interfaces.api.saas_dashboard import router as saas_dashboard_router
 from app.interfaces.api.hotel_config import router as hotel_config_router
+from app.interfaces.api.hotel_media import router as hotel_media_router
 from app.interfaces.api.whatsapp_webhook import router as whatsapp_webhook_router
 
 app = FastAPI(title="Hotel Automation API")
@@ -60,6 +61,7 @@ app.include_router(payments_router)
 app.include_router(rooms_router)
 app.include_router(saas_dashboard_router)
 app.include_router(hotel_config_router)
+app.include_router(hotel_media_router)
 
 @app.get("/")
 def read_root():

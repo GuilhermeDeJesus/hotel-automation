@@ -26,6 +26,7 @@ class HotelConfigUpdate(BaseModel):
     pet_policy: str | None = None
     child_policy: str | None = None
     amenities: str | None = None
+    pix_key: str | None = None
     requires_payment_for_confirmation: bool | None = None
     allows_reservation_without_payment: bool | None = None
 
@@ -92,6 +93,7 @@ def update_config(
         pet_policy=body.pet_policy,
         child_policy=body.child_policy,
         amenities=body.amenities,
+        pix_key=body.pix_key,
         requires_payment_for_confirmation=body.requires_payment_for_confirmation,
         allows_reservation_without_payment=body.allows_reservation_without_payment,
     )

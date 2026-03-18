@@ -1,4 +1,5 @@
 import type { Reservation, ReservationStatus } from "../types/api";
+import TableScroll from "./ui/TableScroll";
 
 interface ReservationsTableProps {
   reservations: Reservation[];
@@ -73,7 +74,7 @@ export default function ReservationsTable({
 }: ReservationsTableProps) {
   return (
     <div className="card" style={{ overflow: "hidden" }}>
-      <div style={{ overflowX: "auto" }}>
+      <TableScroll>
         <table
           style={{
             width: "100%",
@@ -251,7 +252,7 @@ export default function ReservationsTable({
             )}
           </tbody>
         </table>
-      </div>
+      </TableScroll>
     </div>
   );
 }

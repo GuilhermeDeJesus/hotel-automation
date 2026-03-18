@@ -4,7 +4,7 @@ Hotel Context Service - provides hotel information for AI conversations.
 Reads hotel details from the repository and formats them into a
 context string that can be injected into the AI system prompt.
 """
-from typing import Dict
+from typing import Dict, Optional
 
 from app.domain.repositories.hotel_repository import HotelRepository
 
@@ -16,14 +16,14 @@ class HotelContextService:
         self.hotel_repository = hotel_repository
         self.context_data = context_data or {}
 
-    def get_context(self) -> str:
+    def get_context(self, hotel_id: Optional[str] = None) -> str:
         """
         Build a context string with hotel details.
 
         Uses repository data when present. If nothing is configured,
         returns an empty string so the AI does not hallucinate facts.
         """
-        data = self._load_context_data()
+        data = self._load_context_data(hotel_id=hotel_id)
         if not any(value for value in data.values()):
             return ""
 
@@ -38,12 +38,12 @@ class HotelContextService:
         lines.append("")
         return "\n".join(lines)
 
-    def _load_context_data(self) -> Dict[str, str]:
+    def _load_context_data(self, hotel_id: Optional[str] = None) -> Dict[str, str]:
         # Allow explicit overrides (useful for tests)
         if self.context_data:
             return self.context_data
 
-        hotel = self.hotel_repository.get_active_hotel()
+        hotel = self.hotel_repository.get_active_hotel(hotel_id)
         if not hotel:
             return {}
 

@@ -26,7 +26,22 @@ async function fetchApi<T>(
   const allHeaders = { ...getAuthHeaders(), ...(headers ?? {}) };
   const res = await fetch(url, { headers: allHeaders });
   if (!res.ok) {
-    throw new Error(`API error: ${res.status} ${res.statusText}`);
+    let data: any = null;
+    try {
+      data = await res.json();
+    } catch {
+      // payload pode não ser JSON (ex.: HTML de erro do proxy)
+    }
+
+    const rawDetail = data?.detail;
+    const detail =
+      (Array.isArray(rawDetail) ? rawDetail[0]?.msg : rawDetail) ||
+      data?.message ||
+      data?.error ||
+      res.statusText ||
+      `API error: ${res.status} ${res.statusText}`;
+
+    throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
   }
   return res.json();
 }
@@ -261,6 +276,7 @@ export async function updateHotelConfig(hotelId: string, payload: {
   pet_policy?: string;
   child_policy?: string;
   amenities?: string;
+  pix_key?: string;
   requires_payment_for_confirmation?: boolean;
   allows_reservation_without_payment?: boolean;
 }) {
@@ -277,7 +293,78 @@ export async function updateHotelConfig(hotelId: string, payload: {
   return res.json();
 }
 
-export async function invalidateCache(): Promise<{ deleted_keys: number }> {
+export async function uploadHotelMedia(
+  hotelId: string,
+  payload: {
+    scope: "HOTEL" | "ROOM";
+    room_number?: string;
+    caption?: string;
+    file: File;
+  }
+) {
+  const formData = new FormData();
+  formData.append("scope", payload.scope);
+  if (payload.scope === "ROOM") {
+    if (!payload.room_number) throw new Error("room_number é obrigatório para scope=ROOM");
+    formData.append("room_number", payload.room_number);
+  }
+  if (payload.caption) formData.append("caption", payload.caption);
+  formData.append("file", payload.file);
+
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
+  const res = await fetch(`${baseUrl}/saas/hotel/media`, {
+    method: "POST",
+    headers: {
+      ...getAuthHeaders(),
+      "X-Hotel-Id": hotelId,
+      // "Content-Type" deve ser deixado para o browser (boundary do multipart).
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `API error: ${res.status} ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function fetchHotelMedia(
+  hotelId: string,
+  params: { scope: "HOTEL" | "ROOM"; room_number?: string; limit?: number }
+) {
+  const p: Record<string, string | undefined> = {};
+  p.scope = params.scope;
+  if (params.room_number) p.room_number = params.room_number;
+  if (params.limit) p.limit = String(params.limit);
+
+  return fetchApi<{ items: import("../types/api").HotelMedia[] }>(
+    "/saas/hotel/media",
+    p,
+    {
+      // Backend usa token para resolver hotel_id, mas mantemos o header como auxílio compatível.
+      "X-Hotel-Id": hotelId,
+    }
+  );
+}
+
+export async function deleteHotelMedia(hotelId: string, mediaId: string) {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
+  const res = await fetch(`${baseUrl}/saas/hotel/media/${encodeURIComponent(mediaId)}`, {
+    method: "DELETE",
+    headers: { ...getAuthHeaders(), "X-Hotel-Id": hotelId },
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.detail || `API error: ${res.status} ${res.statusText}`);
+  }
+  return res.json();
+}
+
+export async function invalidateCache(
+  hotelId?: string,
+): Promise<{ deleted_keys: number }> {
   const token = getAdminToken();
   if (!token) {
     throw new Error("Token admin não configurado. Acesse Auditoria para configurar.");
@@ -285,7 +372,10 @@ export async function invalidateCache(): Promise<{ deleted_keys: number }> {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "/api";
   const res = await fetch(`${baseUrl}/saas/cache/invalidate`, {
     method: "POST",
-    headers: { "X-Admin-Token": token },
+    headers: {
+      "X-Admin-Token": token,
+      ...(hotelId ? { "X-Hotel-Id": hotelId } : {}),
+    },
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

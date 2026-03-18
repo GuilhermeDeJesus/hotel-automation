@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { fetchReservations } from "../api/client";
 import { useTenant } from "../contexts/TenantContext";
 import type { ReservationsResponse, ReservationsFilters } from "../types/api";
@@ -16,8 +16,11 @@ export function useReservations(filters?: ReservationsFilters): UseReservationsR
   const [isLoading, setIsLoading] = useState(true);
 
   const { hotelId } = useTenant();
+  const requestIdRef = useRef(0);
 
   const load = () => {
+    const requestId = ++requestIdRef.current;
+
     if (!hotelId) {
       setError("Hotel não definido. Faça login novamente.");
       setData(null);
@@ -33,16 +36,23 @@ export function useReservations(filters?: ReservationsFilters): UseReservationsR
       room_number: filters?.room_number || undefined,
       limit: 100,
     })
-      .then(setData)
-      .catch((e) =>
-        setError(e instanceof Error ? e.message : "Erro ao carregar reservas")
-      )
-      .finally(() => setIsLoading(false));
+      .then((res) => {
+        if (requestId !== requestIdRef.current) return;
+        setData(res);
+      })
+      .catch((e) => {
+        if (requestId !== requestIdRef.current) return;
+        setError(e instanceof Error ? e.message : "Erro ao carregar reservas");
+      })
+      .finally(() => {
+        if (requestId !== requestIdRef.current) return;
+        setIsLoading(false);
+      });
   };
 
   useEffect(() => {
     load();
-  }, [filters?.from, filters?.to, filters?.status, filters?.room_number]);
+  }, [hotelId, filters?.from, filters?.to, filters?.status, filters?.room_number]);
 
   return { data, error, isLoading, refetch: load };
 }

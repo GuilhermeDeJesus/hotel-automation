@@ -4,17 +4,66 @@ import os
 import uuid
 from datetime import date, datetime
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.infrastructure.cache.redis_repository import RedisRepository
 from app.infrastructure.persistence.sql.database import SessionLocal
-from app.infrastructure.persistence.sql.models import AnalyticsEventModel, LeadModel, SaaSAdminAuditEventModel, SaaSAuditMetricsSnapshotModel
+from app.infrastructure.persistence.sql.models import (
+    AnalyticsEventModel,
+    HotelModel,
+    LeadModel,
+    SaaSAdminAuditEventModel,
+    SaaSAuditMetricsSnapshotModel,
+)
 from app.infrastructure.persistence.sql.saas_repository_sql import SaaSRepositorySQL
+from app.interfaces.dependencies.auth import get_current_user
 
 
 def _unique_phone() -> str:
     return "5511888" + str(uuid.uuid4().int)[0:8]
+
+
+SAAS_TEST_HOTEL_ID = "saas-test-hotel-1"
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _ensure_test_hotel_exists():
+    session = SessionLocal()
+    try:
+        existing = session.query(HotelModel).filter_by(id=SAAS_TEST_HOTEL_ID).first()
+        if existing is None:
+            session.add(
+                HotelModel(
+                    id=SAAS_TEST_HOTEL_ID,
+                    name="SaaS Test Hotel",
+                    address="Test Address 123",
+                    contact_phone="11999999999",
+                    checkin_time="14:00",
+                    checkout_time="12:00",
+                    cancellation_policy="Standard",
+                    pet_policy="Allowed",
+                    child_policy="Allowed",
+                    amenities="WiFi, Breakfast",
+                )
+            )
+            session.commit()
+    finally:
+        session.close()
+
+
+@pytest.fixture(autouse=True)
+def _override_get_current_user():
+    class MockUser:
+        def __init__(self, hotel_id: str):
+            self.hotel_id = hotel_id
+            self.role = "manager"
+            self.is_active = True
+
+    app.dependency_overrides[get_current_user] = lambda: MockUser(SAAS_TEST_HOTEL_ID)
+    yield
+    app.dependency_overrides.clear()
 
 
 def test_saas_kpis_endpoint_returns_expected_shape():
@@ -24,9 +73,15 @@ def test_saas_kpis_endpoint_returns_expected_shape():
 
     phone = _unique_phone()
     try:
-        repo.touch_lead(phone=phone, source="twilio", stage="ENGAGED")
-        repo.track_event(phone=phone, source="twilio", event_type="inbound_message")
+        repo.touch_lead(hotel_id=SAAS_TEST_HOTEL_ID, phone=phone, source="twilio", stage="ENGAGED")
         repo.track_event(
+            hotel_id=SAAS_TEST_HOTEL_ID,
+            phone=phone,
+            source="twilio",
+            event_type="inbound_message",
+        )
+        repo.track_event(
+            hotel_id=SAAS_TEST_HOTEL_ID,
             phone=phone,
             source="twilio",
             event_type="outbound_message",
@@ -69,8 +124,8 @@ def test_saas_leads_and_funnel_reflect_seeded_lead_stage():
     stage = "RESERVATION_CONFIRMED"
 
     try:
-        repo.touch_lead(phone=phone, source="meta", stage=stage)
-        repo.track_event(phone=phone, source="meta", event_type="inbound_message")
+        repo.touch_lead(hotel_id=SAAS_TEST_HOTEL_ID, phone=phone, source="meta", stage=stage)
+        repo.track_event(hotel_id=SAAS_TEST_HOTEL_ID, phone=phone, source="meta", event_type="inbound_message")
 
         leads_response = client.get(f"/saas/leads?status={stage}")
         assert leads_response.status_code == 200
@@ -123,12 +178,12 @@ def test_saas_kpis_filters_by_source_and_status():
     phone_meta = _unique_phone()
 
     try:
-        repo.touch_lead(phone=phone_twilio, source="twilio", stage="ENGAGED")
-        repo.track_event(phone=phone_twilio, source="twilio", event_type="inbound_message")
-        repo.track_event(phone=phone_twilio, source="twilio", event_type="outbound_message", success=True)
+        repo.touch_lead(hotel_id=SAAS_TEST_HOTEL_ID, phone=phone_twilio, source="twilio", stage="ENGAGED")
+        repo.track_event(hotel_id=SAAS_TEST_HOTEL_ID, phone=phone_twilio, source="twilio", event_type="inbound_message")
+        repo.track_event(hotel_id=SAAS_TEST_HOTEL_ID, phone=phone_twilio, source="twilio", event_type="outbound_message", success=True)
 
-        repo.touch_lead(phone=phone_meta, source="meta", stage="NEW")
-        repo.track_event(phone=phone_meta, source="meta", event_type="inbound_message")
+        repo.touch_lead(hotel_id=SAAS_TEST_HOTEL_ID, phone=phone_meta, source="meta", stage="NEW")
+        repo.track_event(hotel_id=SAAS_TEST_HOTEL_ID, phone=phone_meta, source="meta", event_type="inbound_message")
 
         response = client.get("/saas/kpis?source=twilio&status=ENGAGED")
         assert response.status_code == 200
@@ -154,9 +209,16 @@ def test_saas_timeseries_endpoint_returns_points_with_requested_filters():
     custom_source = "phase23test"
 
     try:
-        repo.touch_lead(phone=phone, source=custom_source, stage="ENGAGED")
-        repo.track_event(phone=phone, source=custom_source, event_type="inbound_message")
-        repo.track_event(phone=phone, source=custom_source, event_type="outbound_message", success=True, response_time_ms=700)
+        repo.touch_lead(hotel_id=SAAS_TEST_HOTEL_ID, phone=phone, source=custom_source, stage="ENGAGED")
+        repo.track_event(hotel_id=SAAS_TEST_HOTEL_ID, phone=phone, source=custom_source, event_type="inbound_message")
+        repo.track_event(
+            hotel_id=SAAS_TEST_HOTEL_ID,
+            phone=phone,
+            source=custom_source,
+            event_type="outbound_message",
+            success=True,
+            response_time_ms=700,
+        )
 
         today = date.today().isoformat()
         response = client.get(
@@ -190,9 +252,16 @@ def test_saas_kpis_compare_returns_current_previous_and_delta():
     custom_source = "phase23compare"
 
     try:
-        repo.touch_lead(phone=phone, source=custom_source, stage="ENGAGED")
-        repo.track_event(phone=phone, source=custom_source, event_type="inbound_message")
-        repo.track_event(phone=phone, source=custom_source, event_type="outbound_message", success=True, response_time_ms=500)
+        repo.touch_lead(hotel_id=SAAS_TEST_HOTEL_ID, phone=phone, source=custom_source, stage="ENGAGED")
+        repo.track_event(hotel_id=SAAS_TEST_HOTEL_ID, phone=phone, source=custom_source, event_type="inbound_message")
+        repo.track_event(
+            hotel_id=SAAS_TEST_HOTEL_ID,
+            phone=phone,
+            source=custom_source,
+            event_type="outbound_message",
+            success=True,
+            response_time_ms=500,
+        )
 
         today = date.today().isoformat()
         response = client.get(
@@ -268,10 +337,15 @@ def test_saas_cache_invalidate_endpoint_removes_only_dashboard_keys():
     client = TestClient(app)
     cache = RedisRepository()
 
-    dashboard_key = "saas:dashboard:phase28:test"
+    hotel_1 = "phase28"
+    hotel_2 = "phase29"
+
+    dashboard_key_hotel_1 = f"saas:dashboard:hotel:{hotel_1}:kpis:test"
+    dashboard_key_hotel_2 = f"saas:dashboard:hotel:{hotel_2}:kpis:test"
     other_key = "flow:phase28:test"
 
-    cache.set(dashboard_key, {"k": "v"}, ttl_seconds=300)
+    cache.set(dashboard_key_hotel_1, {"k": "v"}, ttl_seconds=300)
+    cache.set(dashboard_key_hotel_2, {"k": "v"}, ttl_seconds=300)
     cache.set(other_key, {"step": "summary_displayed"}, ttl_seconds=300)
 
     try:
@@ -280,7 +354,7 @@ def test_saas_cache_invalidate_endpoint_removes_only_dashboard_keys():
 
         response = client.post(
             "/saas/cache/invalidate",
-            headers={"X-Admin-Token": "phase28-token"},
+            headers={"X-Admin-Token": "phase28-token", "X-Hotel-Id": hotel_1},
         )
         assert response.status_code == 200
 
@@ -288,7 +362,8 @@ def test_saas_cache_invalidate_endpoint_removes_only_dashboard_keys():
         assert "deleted_keys" in payload
         assert payload["deleted_keys"] >= 1
 
-        assert cache.get(dashboard_key) is None
+        assert cache.get(dashboard_key_hotel_1) is None
+        assert cache.get(dashboard_key_hotel_2) is not None
         assert cache.get(other_key) is not None
     finally:
         if previous_token is None:
@@ -296,7 +371,8 @@ def test_saas_cache_invalidate_endpoint_removes_only_dashboard_keys():
         else:
             os.environ["SAAS_ADMIN_TOKEN"] = previous_token
 
-        cache.delete(dashboard_key)
+        cache.delete(dashboard_key_hotel_1)
+        cache.delete(dashboard_key_hotel_2)
         cache.delete(other_key)
 
 
